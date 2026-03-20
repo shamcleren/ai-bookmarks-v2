@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { nameToSlug } from '@/lib/utils'
 
 interface Tool {
   id: string
@@ -146,7 +147,7 @@ function SearchContent() {
                     💬 {tool.verdict.slice(0, 80)}...
                   </p>
                 )}
-                <Link href={`/tools/${tool.id}`} style={{ color: '#00d9ff', fontSize: 13, marginTop: 8, display: 'inline-block' }}>
+                <Link href={`/tools/${tool.id}-${nameToSlug(tool.name)}`} style={{ color: '#00d9ff', fontSize: 13, marginTop: 8, display: 'inline-block' }}>
                   查看详情 →
                 </Link>
               </div>

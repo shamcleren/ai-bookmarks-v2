@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { nameToSlug } from '@/lib/utils'
 import { useAuth } from '@/components/AuthProvider'
 
 interface Tool {
@@ -126,7 +127,7 @@ function ToolCard({ tool, selected, onToggle }: { tool: Tool; selected: boolean;
           <span style={{ color: commitBadge.color }}>📊 {commitBadge.label}</span>
           {tool.price_model && <span>💰 {tool.price_model}</span>}
         </div>
-        <Link href={`/tools/${tool.id}`} style={{ color: '#00d9ff', fontSize: 13 }}>
+        <Link href={`/tools/${tool.id}-${nameToSlug(tool.name)}`} style={{ color: '#00d9ff', fontSize: 13 }}>
           查看详情 →
         </Link>
       </div>
@@ -160,7 +161,7 @@ function FeaturedCard({ tool }: { tool: Tool }) {
       <p style={{ color: '#aaa', fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
         {tool.description?.slice(0, 80)}...
       </p>
-      <Link href={`/tools/${tool.id}`} style={{ color: '#00d9ff', fontSize: 13 }}>
+      <Link href={`/tools/${tool.id}-${nameToSlug(tool.name)}`} style={{ color: '#00d9ff', fontSize: 13 }}>
         阅读评测 →
       </Link>
     </div>

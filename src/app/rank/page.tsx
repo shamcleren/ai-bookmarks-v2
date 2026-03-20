@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { nameToSlug } from '@/lib/utils'
 
 interface Tool {
   id: string
@@ -121,7 +122,7 @@ export default function Rank() {
                     </div>
                   </div>
 
-                  <Link href={`/tools/${tool.id}`} style={{ color: '#00d9ff', fontSize: 13 }}>
+                  <Link href={`/tools/${tool.id}-${nameToSlug(tool.name)}`} style={{ color: '#00d9ff', fontSize: 13 }}>
                     查看 →
                   </Link>
                 </div>

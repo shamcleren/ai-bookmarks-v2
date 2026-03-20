@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/AuthProvider'
+import { extractToolIdFromSlug } from '@/lib/utils'
 
 interface Tool {
   id: string
@@ -84,7 +85,8 @@ function getDeployIcon(type: string) {
 
 export default function ToolDetail() {
   const params = useParams()
-  const id = params.id as string
+  const slug = params.slug as string
+  const toolId = extractToolIdFromSlug(slug)
   const { user } = useAuth()
   const [tool, setTool] = useState<Tool | null>(null)
   const [loading, setLoading] = useState(true)
@@ -96,44 +98,45 @@ export default function ToolDetail() {
   const supabase = createClient()
 
   useEffect(() => {
-    if (!id) return
+    if (!toolId) {
+      setError('工具不存在')
+      setLoading(false)
+      return
+    }
 
     async function fetchData() {
       try {
         const { data, error } = await supabase
           .from('tools')
           .select('*')
-          .eq('id', id)
+          .eq('id', toolId)
           .single()
 
         if (error) throw error
         setTool(data)
 
-        // 检查收藏
         if (user) {
           const { data: favData } = await supabase
             .from('favorites')
             .select('id')
-            .eq('tool_id', id)
+            .eq('tool_id', toolId)
             .eq('user_id', user.id)
             .single()
           setFavorited(!!favData)
 
-          // 检查用户评分
           const { data: ratingData } = await supabase
             .from('user_ratings')
             .select('rating')
-            .eq('tool_id', id)
+            .eq('tool_id', toolId)
             .eq('user_id', user.id)
             .single()
           if (ratingData) setUserRating(ratingData.rating)
         }
 
-        // 获取平均评分
         const { data: ratingsData } = await supabase
           .from('user_ratings')
           .select('rating')
-          .eq('tool_id', id)
+          .eq('tool_id', toolId)
         if (ratingsData && ratingsData.length > 0) {
           const avg = Math.round(ratingsData.reduce((sum, r) => sum + r.rating, 0) / ratingsData.length)
           setAvgRating(avg)
@@ -147,7 +150,7 @@ export default function ToolDetail() {
     }
 
     fetchData()
-  }, [id, user])
+  }, [toolId, user])
 
   async function handleRate(rating: number) {
     if (!user) {
@@ -156,31 +159,18 @@ export default function ToolDetail() {
     }
 
     try {
-      const { error } = await supabase
+      await supabase
         .from('user_ratings')
-        .upsert({ tool_id: id, user_id: user.id, rating, updated_at: new Date().toISOString() }, {
+        .upsert({ tool_id: toolId, user_id: user.id, rating, updated_at: new Date().toISOString() }, {
           onConflict: 'user_id,tool_id'
         })
-
-      if (error) throw error
       setUserRating(rating)
 
-      // 重新获取平均
-      const { data: ratingsData } = await supabase
-        .from('user_ratings')
-        .select('rating')
-        .eq('tool_id', id)
+      const { data: ratingsData } = await supabase.from('user_ratings').select('rating').eq('tool_id', toolId)
       if (ratingsData && ratingsData.length > 0) {
         const avg = Math.round(ratingsData.reduce((sum, r) => sum + r.rating, 0) / ratingsData.length)
         setAvgRating(avg)
         setRatingCount(ratingsData.length)
-      }
-
-      // 更新工具的综合评分
-      const { data: toolData } = await supabase.from('tools').select('overall_score').eq('id', id).single()
-      if (toolData) {
-        await supabase.from('tools').update({ overall_score: avgRating * 20 }).eq('id', id)
-        setTool({ ...tool!, overall_score: avgRating * 20 })
       }
     } catch (e) {
       console.error('评分失败:', e)
@@ -195,10 +185,10 @@ export default function ToolDetail() {
 
     try {
       if (favorited) {
-        await supabase.from('favorites').delete().eq('tool_id', id).eq('user_id', user.id)
+        await supabase.from('favorites').delete().eq('tool_id', toolId).eq('user_id', user.id)
         setFavorited(false)
       } else {
-        await supabase.from('favorites').insert({ tool_id: id, user_id: user.id })
+        await supabase.from('favorites').insert({ tool_id: toolId, user_id: user.id })
         setFavorited(true)
       }
     } catch (e) {
@@ -254,7 +244,9 @@ export default function ToolDetail() {
         {/* Tags */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 25 }}>
           {(tool.tags || []).map((tag, i) => (
-            <span key={i} className="tag">{tag}</span>
+            <Link key={i} href={`/search?q=${encodeURIComponent(tag)}`} className="tag" style={{ textDecoration: 'none' }}>
+              {tag}
+            </Link>
           ))}
           {tool.deploy_type && (
             <span style={{ padding: '4px 12px', background: 'rgba(0,217,255,0.1)', color: '#00d9ff', borderRadius: 12, fontSize: 12 }}>
@@ -278,43 +270,19 @@ export default function ToolDetail() {
         </div>
 
         {/* 用户评分 */}
-        <div style={{
-          background: 'rgba(255,193,7,0.05)',
-          border: '1px solid rgba(255,193,7,0.15)',
-          borderRadius: 12,
-          padding: 20,
-          marginBottom: 25
-        }}>
+        <div style={{ background: 'rgba(255,193,7,0.05)', border: '1px solid rgba(255,193,7,0.15)', borderRadius: 12, padding: 20, marginBottom: 25 }}>
           <h3 style={{ color: '#ffc107', fontSize: '1rem', marginBottom: 12 }}>⭐ 你的评分</h3>
           {avgRating > 0 && (
-            <p style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>
-              当前平均 {avgRating} 分（{ratingCount} 人评分）
-            </p>
+            <p style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>当前平均 {avgRating} 分（{ratingCount} 人评分）</p>
           )}
           <StarRating value={userRating} onChange={handleRate} />
-          {userRating > 0 && (
-            <p style={{ color: '#00ff88', fontSize: 12, marginTop: 8 }}>
-              ✓ 已提交 {userRating} 星评分
-            </p>
-          )}
-          {!user && (
-            <p style={{ color: '#888', fontSize: 12, marginTop: 8 }}>
-              登录后可参与评分
-            </p>
-          )}
+          {userRating > 0 && <p style={{ color: '#00ff88', fontSize: 12, marginTop: 8 }}>✓ 已提交 {userRating} 星评分</p>}
+          {!user && <p style={{ color: '#888', fontSize: 12, marginTop: 8 }}>登录后可参与评分</p>}
         </div>
 
         {/* 实测信息 */}
         {tool.tested_at && (
-          <div style={{
-            background: 'rgba(0,255,136,0.05)',
-            border: '1px solid rgba(0,255,136,0.1)',
-            borderRadius: 8,
-            padding: '12px 16px',
-            marginBottom: 25,
-            fontSize: 13,
-            color: '#888'
-          }}>
+          <div style={{ background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: 8, padding: '12px 16px', marginBottom: 25, fontSize: 13, color: '#888' }}>
             🧪 实测时间：{new Date(tool.tested_at).toLocaleDateString('zh-CN')}
             {tool.test_environment && <> | 测试环境：{tool.test_environment}</>}
           </div>
@@ -364,13 +332,7 @@ export default function ToolDetail() {
 
         {/* 评测结论 */}
         {tool.verdict && (
-          <div style={{
-            background: 'rgba(0,217,255,0.05)',
-            border: '1px solid rgba(0,217,255,0.15)',
-            borderRadius: 12,
-            padding: 20,
-            marginTop: 25
-          }}>
+          <div style={{ background: 'rgba(0,217,255,0.05)', border: '1px solid rgba(0,217,255,0.15)', borderRadius: 12, padding: 20, marginTop: 25 }}>
             <h2 style={{ color: '#00d9ff', fontSize: '1.15rem', marginBottom: 15 }}>💬 评测结论</h2>
             <p style={{ color: '#ccc', lineHeight: 1.8, fontStyle: 'italic' }}>{tool.verdict}</p>
           </div>
