@@ -178,6 +178,7 @@ function Nav({ user }: { user: any }) {
     <div className="nav">
       <a href="/" className="active">🏠 首页</a>
       <a href="/search">🔍 搜索</a>
+      <a href="/tags">🏷️ 标签</a>
       <a href="/rank">🏆 榜单</a>
       {user ? (
         <>

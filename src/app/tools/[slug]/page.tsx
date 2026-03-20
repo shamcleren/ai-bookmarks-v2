@@ -324,7 +324,34 @@ export default function ToolDetail() {
           </div>
         )}
 
-        {/* 简介 */}
+                {/* 分享 */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 25, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ color: '#666', fontSize: 13 }}>分享：</span>
+          <a
+            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(tool.name + ' - AI 工具评测')}&url=${encodeURIComponent(window.location.href)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ padding: '8px 16px', background: 'rgba(29,161,242,0.15)', border: '1px solid rgba(29,161,242,0.3)', borderRadius: 8, color: '#1da1f2', fontSize: 13, textDecoration: 'none' }}
+          >
+            𝕏 Twitter
+          </a>
+          <a
+            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ padding: '8px 16px', background: 'rgba(24,119,242,0.15)', border: '1px solid rgba(24,119,242,0.3)', borderRadius: 8, color: '#1877f2', fontSize: 13, textDecoration: 'none' }}
+          >
+            f Facebook
+          </a>
+          <button
+            onClick={() => { navigator.clipboard.writeText(window.location.href).catch(() => {}); alert('链接已复制！') }}
+            style={{ padding: '8px 16px', background: 'rgba(0,217,255,0.1)', border: '1px solid rgba(0,217,255,0.2)', borderRadius: 8, color: '#00d9ff', fontSize: 13, cursor: 'pointer' }}
+          >
+            📋 复制链接
+          </button>
+        </div>
+
+{/* 简介 */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 25, marginTop: 25 }}>
           <h2 style={{ color: '#00d9ff', fontSize: '1.15rem', marginBottom: 15 }}>📝 简介</h2>
           <p style={{ color: '#ccc', lineHeight: 1.8 }}>{tool.description}</p>
