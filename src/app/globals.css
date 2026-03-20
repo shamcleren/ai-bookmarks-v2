@@ -27,15 +27,27 @@ body {
 .container {
   max-width: 900px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 20px 16px;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 40px 20px;
+  }
 }
 
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 24px;
+  padding: 16px;
   transition: all 0.3s ease;
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: 24px;
+  }
 }
 
 .card:hover {
@@ -86,6 +98,7 @@ a:hover {
   transition: all 0.3s;
   cursor: pointer;
   border: none;
+  font-size: 14px;
 }
 
 .btn:hover {
@@ -101,20 +114,49 @@ a:hover {
 
 .nav {
   display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin-bottom: 40px;
+  justify-content: flex-start;
+  gap: 4px;
+  margin-bottom: 30px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.nav::-webkit-scrollbar {
+  display: none;
 }
 
 .nav a {
   color: var(--text-secondary);
-  padding: 12px 24px;
+  padding: 8px 12px;
   border-radius: 10px;
   transition: all 0.3s;
+  white-space: nowrap;
+  font-size: 13px;
+  flex-shrink: 0;
 }
 
 .nav a:hover, .nav a.active {
   color: var(--accent);
   background: rgba(0, 217, 255, 0.15);
   text-decoration: none;
+}
+
+@media (min-width: 768px) {
+  .nav {
+    justify-content: center;
+    gap: 15px;
+  }
+  .nav a {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+}
+
+/* Mobile-friendly tool card */
+@media (max-width: 480px) {
+  .card {
+    padding: 14px;
+  }
 }

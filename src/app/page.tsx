@@ -78,7 +78,7 @@ function ToolCard({ tool, selected, onToggle }: { tool: Tool; selected: boolean;
             type="checkbox"
             checked={selected}
             onChange={() => onToggle(tool.id)}
-            style={{ marginTop: 4, cursor: 'pointer', width: 18, height: 18, accentColor: '#00d9ff' }}
+            style={{ marginTop: 4, cursor: 'pointer', width: 16, height: 16, accentColor: '#00d9ff' }}
           />
           <div>
             <h3 style={{ fontSize: 17, marginBottom: 8 }}>
@@ -121,7 +121,7 @@ function ToolCard({ tool, selected, onToggle }: { tool: Tool; selected: boolean;
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#666' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, flexWrap: 'wrap', gap: 8, color: '#666' }}>
         <div style={{ display: 'flex', gap: 12 }}>
           {tool.stars > 0 && <span>⭐ {tool.stars.toLocaleString()}</span>}
           <span style={{ color: commitBadge.color }}>📊 {commitBadge.label}</span>
@@ -145,7 +145,7 @@ function FeaturedCard({ tool }: { tool: Tool }) {
       borderRadius: 16,
       padding: 24,
       flex: 1,
-      minWidth: 280
+      minWidth: 240
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: 'rgba(0,255,136,0.2)', color: '#00ff88' }}>
