@@ -123,6 +123,14 @@
 ## 7. 环境变量
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=        # Supabase 项目 URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=   # Supabase 匿名密钥
+NEXT_PUBLIC_SUPABASE_URL=https://rcamsqvyibqzbphxutvc.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_xxx  # 在 Vercel 中配置
 ```
+
+---
+
+## 8. 部署信息
+
+- **GitHub Repo:** https://github.com/shamcleren/ai-bookmarks-v2 ✅
+- **Vercel App:** (待创建 - 导入 GitHub 仓库即可)
+- **Supabase Project:** ✅ 已配置
