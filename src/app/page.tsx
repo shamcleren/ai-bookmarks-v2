@@ -30,6 +30,15 @@ function starRating(ease: number, useful: number, hype: number) {
   return '★'.repeat(full) + '☆'.repeat(5 - full)
 }
 
+function formatDate(dateStr: string) {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('zh-CN', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  })
+}
+
 function ToolCard({ tool }: { tool: Tool }) {
   const rating = starRating(tool.ease_score, tool.useful_score, tool.hype_score)
   const isRated = tool.status === 'rated'
@@ -60,7 +69,7 @@ function ToolCard({ tool }: { tool: Tool }) {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#666' }}>
-          {tool.source && <span>{tool.source}</span>}
+          {tool.source && <span>📰 {tool.source}</span>}
           {tool.stars > 0 && <span>⭐ {tool.stars.toLocaleString()}</span>}
         </div>
         <div className="stars" style={{ fontSize: 14 }}>{rating}</div>
@@ -98,8 +107,13 @@ function Nav({ user }: { user: any }) {
   )
 }
 
+interface GroupedTools {
+  date: string
+  tools: Tool[]
+}
+
 export default function Home() {
-  const [tools, setTools] = useState<Tool[]>([])
+  const [groupedTools, setGroupedTools] = useState<GroupedTools[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const { user, loading: authLoading } = useAuth()
@@ -113,10 +127,22 @@ export default function Home() {
           .from('tools')
           .select('*')
           .order('created_at', { ascending: false })
-          .limit(20)
 
         if (error) throw error
-        setTools(data || [])
+
+        // Group by date
+        const groups: { [key: string]: Tool[] } = {}
+        ;(data || []).forEach(tool => {
+          const date = tool.created_at?.split('T')[0] || 'unknown'
+          if (!groups[date]) groups[date] = []
+          groups[date].push(tool)
+        })
+
+        const result = Object.entries(groups)
+          .sort(([a], [b]) => b.localeCompare(a))
+          .map(([date, tools]) => ({ date, tools }))
+
+        setGroupedTools(result)
       } catch (e: any) {
         console.error('Error fetching tools:', e)
         setError(e.message || '加载失败')
@@ -154,17 +180,30 @@ export default function Home() {
         <div style={{ textAlign: 'center', color: '#ff6b6b', padding: 60 }}>
           加载失败: {error}
         </div>
-      ) : tools.length === 0 ? (
+      ) : groupedTools.length === 0 ? (
         <div style={{ textAlign: 'center', color: '#666', padding: 60 }}>
           暂无数据
         </div>
       ) : (
         <div>
-          <p style={{ color: '#888', marginBottom: 20, fontSize: 14 }}>
-            共收录 {tools.length} 款 AI 工具
-          </p>
-          {tools.map(tool => (
-            <ToolCard key={tool.id} tool={tool} />
+          {groupedTools.map(group => (
+            <div key={group.date} style={{ marginBottom: 40 }}>
+              <h2 style={{
+                fontSize: '1.2rem',
+                marginBottom: 20,
+                paddingBottom: 10,
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                color: '#00d9ff'
+              }}>
+                📅 {formatDate(group.date)}
+                <span style={{ color: '#666', fontSize: 14, marginLeft: 12 }}>
+                  {group.tools.length} 款工具
+                </span>
+              </h2>
+              {group.tools.map(tool => (
+                <ToolCard key={tool.id} tool={tool} />
+              ))}
+            </div>
           ))}
         </div>
       )}
