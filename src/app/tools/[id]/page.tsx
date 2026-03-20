@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/components/AuthProvider'
 
 interface Tool {
   id: string
@@ -21,19 +22,57 @@ interface Tool {
   stars: number
   verdict: string
   created_at: string
+  deploy_type: string
+  platform: string
+  license: string
+  price_model: string
+  commit_frequency: string
+  overall_score: number
+  pros: string[]
+  cons: string[]
+  suitable_for: string[]
+  tested_at: string
+  test_environment: string
+}
+
+function ScoreBar({ label, score, max = 100 }: { label: string; score: number; max?: number }) {
+  const pct = Math.min((score / max) * 100, 100)
+  const color = pct > 80 ? '#00ff88' : pct > 60 ? '#ffc107' : '#ff6b6b'
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13 }}>
+        <span>{label}</span>
+        <span style={{ color }}>{score}</span>
+      </div>
+      <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 4 }} />
+      </div>
+    </div>
+  )
+}
+
+function getDeployIcon(type: string) {
+  switch (type) {
+    case 'local': return '🖥️'
+    case 'cloud': return '☁️'
+    case 'api': return '🔌'
+    case 'browser': return '🌐'
+    default: return '📦'
+  }
 }
 
 export default function ToolDetail() {
   const params = useParams()
   const id = params.id as string
+  const { user } = useAuth()
   const [tool, setTool] = useState<Tool | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [favorited, setFavorited] = useState(false)
+  const supabase = createClient()
 
   useEffect(() => {
     if (!id) return
-
-    const supabase = createClient()
 
     async function fetchTool() {
       try {
@@ -45,6 +84,17 @@ export default function ToolDetail() {
 
         if (error) throw error
         setTool(data)
+
+        // 检查是否已收藏
+        if (user) {
+          const { data: favData } = await supabase
+            .from('favorites')
+            .select('id')
+            .eq('tool_id', id)
+            .eq('user_id', user.id)
+            .single()
+          setFavorited(!!favData)
+        }
       } catch (e: any) {
         setError(e.message)
       } finally {
@@ -53,26 +103,36 @@ export default function ToolDetail() {
     }
 
     fetchTool()
-  }, [id])
+  }, [id, user])
+
+  async function toggleFavorite() {
+    if (!user) {
+      window.location.href = '/auth/login'
+      return
+    }
+
+    try {
+      if (favorited) {
+        await supabase.from('favorites').delete().eq('tool_id', id).eq('user_id', user.id)
+        setFavorited(false)
+      } else {
+        await supabase.from('favorites').insert({ tool_id: id, user_id: user.id })
+        setFavorited(true)
+      }
+    } catch (e) {
+      console.error('收藏失败:', e)
+    }
+  }
 
   if (loading) {
-    return (
-      <div className="container" style={{ textAlign: 'center', color: '#666', padding: 60 }}>
-        加载中...
-      </div>
-    )
+    return <div className="container" style={{ textAlign: 'center', color: '#666', padding: 60 }}>加载中...</div>
   }
 
   if (error || !tool) {
-    return (
-      <div className="container" style={{ textAlign: 'center', color: '#ff6b6b', padding: 60 }}>
-        {error || '工具不存在'}
-      </div>
-    )
+    return <div className="container" style={{ textAlign: 'center', color: '#ff6b6b', padding: 60 }}>{error || '工具不存在'}</div>
   }
 
-  const avgScore = Math.round(((tool.ease_score + tool.useful_score + tool.hype_score) / 3) / 20)
-  const rating = avgScore > 0 ? '★'.repeat(avgScore) + '☆'.repeat(5 - avgScore) : '☆☆☆☆☆'
+  const score = tool.overall_score || Math.round((tool.ease_score + tool.useful_score + tool.hype_score) / 3)
 
   return (
     <div className="container">
@@ -81,49 +141,155 @@ export default function ToolDetail() {
       </Link>
 
       <div className="card" style={{ padding: 30 }}>
-        <h1 style={{ fontSize: '1.8rem', marginBottom: 15 }}>{tool.name}</h1>
-
-        <div style={{ margin: '15px 0', display: 'flex', gap: 15, flexWrap: 'wrap' }}>
-          {tool.url && (
-            <a href={tool.url} target="_blank" rel="noopener noreferrer" className="btn">
-              🔗 访问工具
-            </a>
-          )}
-          {tool.source_url && (
-            <a href={tool.source_url} target="_blank" rel="noopener noreferrer" className="btn btn-outline">
-              📰 {tool.source || '来源'}
-            </a>
-          )}
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+          <div>
+            <h1 style={{ fontSize: '1.8rem', marginBottom: 15 }}>{tool.name}</h1>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {tool.url && (
+                <a href={tool.url} target="_blank" rel="noopener noreferrer" className="btn">
+                  🔗 访问工具
+                </a>
+              )}
+              {tool.source_url && (
+                <a href={tool.source_url} target="_blank" rel="noopener noreferrer" className="btn btn-outline">
+                  📰 {tool.source || '来源'}
+                </a>
+              )}
+              <button
+                onClick={toggleFavorite}
+                className={favorited ? 'btn' : 'btn btn-outline'}
+                style={{ cursor: 'pointer' }}
+              >
+                {favorited ? '⭐ 已收藏' : '☆ 收藏'}
+              </button>
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 48, fontWeight: 'bold', color: score >= 80 ? '#00ff88' : score >= 60 ? '#ffc107' : '#ff6b6b' }}>
+              {score}
+            </div>
+            <div style={{ color: '#666', fontSize: 12 }}>综合评分</div>
+          </div>
         </div>
 
-        <div className="stars" style={{ fontSize: 28, letterSpacing: 4, margin: '20px 0' }}>
-          {rating}
-        </div>
-
+        {/* Tags */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 25 }}>
           {(tool.tags || []).map((tag, i) => (
             <span key={i} className="tag">{tag}</span>
           ))}
-          {tool.can_test && <span className="badge badge-test">🤖 可评测</span>}
+          {tool.deploy_type && (
+            <span style={{ padding: '4px 12px', background: 'rgba(0,217,255,0.1)', color: '#00d9ff', borderRadius: 12, fontSize: 12 }}>
+              {getDeployIcon(tool.deploy_type)} {tool.deploy_type}
+            </span>
+          )}
+          {tool.suitable_for?.map((s, i) => (
+            <span key={i} style={{ padding: '4px 12px', background: 'rgba(255,193,7,0.1)', color: '#ffc107', borderRadius: 12, fontSize: 12 }}>
+              👤 {s}
+            </span>
+          ))}
         </div>
 
+        {/* Meta info */}
+        <div style={{ display: 'flex', gap: 20, marginBottom: 25, color: '#666', fontSize: 13, flexWrap: 'wrap' }}>
+          {tool.stars > 0 && <span>⭐ {tool.stars.toLocaleString()} stars</span>}
+          {tool.license && <span>📜 {tool.license}</span>}
+          {tool.price_model && <span>💰 {tool.price_model}</span>}
+          {tool.commit_frequency && <span>📊 {tool.commit_frequency === 'high' ? '活跃' : tool.commit_frequency === 'medium' ? '一般' : '冷清'}</span>}
+          {tool.platform && <span>💻 {tool.platform}</span>}
+        </div>
+
+        {/* 实测信息 */}
+        {tool.tested_at && (
+          <div style={{
+            background: 'rgba(0,255,136,0.05)',
+            border: '1px solid rgba(0,255,136,0.1)',
+            borderRadius: 8,
+            padding: '12px 16px',
+            marginBottom: 25,
+            fontSize: 13,
+            color: '#888'
+          }}>
+            🧪 实测时间：{new Date(tool.tested_at).toLocaleDateString('zh-CN')}
+            {tool.test_environment && <> | 测试环境：{tool.test_environment}</>}
+          </div>
+        )}
+
+        {/* 5维评分 */}
+        {(tool.ease_score > 0 || tool.useful_score > 0 || tool.hype_score > 0) && (
+          <div style={{
+            background: 'rgba(255,255,255,0.03)',
+            borderRadius: 12,
+            padding: 20,
+            marginBottom: 25
+          }}>
+            <h3 style={{ color: '#00d9ff', fontSize: '1rem', marginBottom: 16 }}>📊 五维评分</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+              <div>
+                <ScoreBar label="易用性" score={tool.ease_score} />
+                <ScoreBar label="有用性" score={tool.useful_score} />
+                <ScoreBar label="热度" score={tool.hype_score} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 优缺点 */}
+        {(tool.pros?.length > 0 || tool.cons?.length > 0) && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 16,
+            marginBottom: 25
+          }}>
+            {tool.pros?.length > 0 && (
+              <div style={{
+                background: 'rgba(0,255,136,0.05)',
+                border: '1px solid rgba(0,255,136,0.15)',
+                borderRadius: 12,
+                padding: 16
+              }}>
+                <h3 style={{ color: '#00ff88', fontSize: '0.95rem', marginBottom: 12 }}>✅ 优点</h3>
+                <ul style={{ paddingLeft: 16, color: '#ccc', fontSize: 14, lineHeight: 1.8 }}>
+                  {tool.pros.map((p, i) => <li key={i}>{p}</li>)}
+                </ul>
+              </div>
+            )}
+            {tool.cons?.length > 0 && (
+              <div style={{
+                background: 'rgba(255,107,107,0.05)',
+                border: '1px solid rgba(255,107,107,0.15)',
+                borderRadius: 12,
+                padding: 16
+              }}>
+                <h3 style={{ color: '#ff6b6b', fontSize: '0.95rem', marginBottom: 12 }}>❌ 缺点</h3>
+                <ul style={{ paddingLeft: 16, color: '#ccc', fontSize: 14, lineHeight: 1.8 }}>
+                  {tool.cons.map((c, i) => <li key={i}>{c}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 简介 */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 25, marginTop: 25 }}>
           <h2 style={{ color: '#00d9ff', fontSize: '1.15rem', marginBottom: 15 }}>📝 简介</h2>
           <p style={{ color: '#ccc', lineHeight: 1.8 }}>{tool.description}</p>
         </div>
 
-        {tool.status === 'rated' && tool.verdict && (
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 25, marginTop: 25 }}>
-            <h2 style={{ color: '#00d9ff', fontSize: '1.15rem', marginBottom: 15 }}>📊 评测结论</h2>
-            <p style={{ color: '#ccc', lineHeight: 1.8 }}>{tool.verdict}</p>
+        {/* 评测结论 */}
+        {tool.verdict && (
+          <div style={{
+            background: 'rgba(0,217,255,0.05)',
+            border: '1px solid rgba(0,217,255,0.15)',
+            borderRadius: 12,
+            padding: 20,
+            marginTop: 25
+          }}>
+            <h2 style={{ color: '#00d9ff', fontSize: '1.15rem', marginBottom: 15 }}>💬 评测结论</h2>
+            <p style={{ color: '#ccc', lineHeight: 1.8, fontStyle: 'italic' }}>{tool.verdict}</p>
           </div>
         )}
-
-        <div style={{ display: 'flex', gap: 20, marginTop: 25, color: '#666', fontSize: 13 }}>
-          {tool.stars > 0 && <span>⭐ {tool.stars.toLocaleString()} stars</span>}
-          {tool.source && <span>来源: {tool.source}</span>}
-          <span>评分: {tool.ease_score + tool.useful_score + tool.hype_score > 0 ? '已评分' : '待评测'}</span>
-        </div>
       </div>
     </div>
   )
