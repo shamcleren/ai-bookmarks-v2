@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/AuthProvider'
 
@@ -31,6 +32,8 @@ interface Tool {
   suitable_for: string[]
 }
 
+const COMPARE_KEY = 'ai-bookmarks-compare'
+
 function getDeployIcon(type: string) {
   switch (type) {
     case 'local': return '🖥️'
@@ -57,19 +60,33 @@ function getCommitBadge(freq: string) {
   }
 }
 
-function ToolCard({ tool }: { tool: Tool }) {
+function ToolCard({ tool, selected, onToggle }: { tool: Tool; selected: boolean; onToggle: (id: string) => void }) {
   const score = tool.overall_score || Math.round((tool.ease_score + tool.useful_score + tool.hype_score) / 3)
   const level = getLevelBadge(score)
   const commitBadge = getCommitBadge(tool.commit_frequency || 'unknown')
 
   return (
-    <div className="card" style={{ marginBottom: 16 }}>
+    <div className="card" style={{
+      marginBottom: 16,
+      border: selected ? '1px solid rgba(0,217,255,0.5)' : undefined,
+      boxShadow: selected ? '0 0 20px rgba(0,217,255,0.15)' : undefined
+    }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-        <h3 style={{ fontSize: 17, marginBottom: 8 }}>
-          <a href={tool.url} target="_blank" rel="noopener noreferrer" style={{ color: '#00d9ff' }}>
-            {tool.name}
-          </a>
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggle(tool.id)}
+            style={{ marginTop: 4, cursor: 'pointer', width: 18, height: 18, accentColor: '#00d9ff' }}
+          />
+          <div>
+            <h3 style={{ fontSize: 17, marginBottom: 8 }}>
+              <a href={tool.url} target="_blank" rel="noopener noreferrer" style={{ color: '#00d9ff' }}>
+                {tool.name}
+              </a>
+            </h3>
+          </div>
+        </div>
         <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: level.bg, color: level.color }}>
           {level.label}
         </span>
@@ -159,6 +176,7 @@ function Nav({ user }: { user: any }) {
   return (
     <div className="nav">
       <a href="/" className="active">🏠 首页</a>
+      <a href="/search">🔍 搜索</a>
       <a href="/rank">🏆 榜单</a>
       {user ? (
         <>
@@ -189,12 +207,40 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const { user, loading: authLoading } = useAuth()
-
-  // Filters
   const [deployFilter, setDeployFilter] = useState('全部')
   const [sortBy, setSortBy] = useState('overall_score')
-
+  const [compareIds, setCompareIds] = useState<string[]>([])
+  const router = useRouter()
   const supabase = createClient()
+
+  // Load compare ids from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(COMPARE_KEY)
+      if (saved) setCompareIds(JSON.parse(saved))
+    } catch {}
+  }, [])
+
+  const toggleCompare = useCallback((id: string) => {
+    setCompareIds(prev => {
+      const next = prev.includes(id)
+        ? prev.filter(i => i !== id)
+        : prev.length < 3 ? [...prev, id] : prev
+      try { localStorage.setItem(COMPARE_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }, [])
+
+  const goCompare = useCallback(() => {
+    if (compareIds.length >= 2) {
+      router.push(`/compare?ids=${compareIds.join(',')}`)
+    }
+  }, [compareIds, router])
+
+  const clearCompare = useCallback(() => {
+    setCompareIds([])
+    try { localStorage.removeItem(COMPARE_KEY) } catch {}
+  }, [])
 
   useEffect(() => {
     async function fetchTools() {
@@ -205,10 +251,8 @@ export default function Home() {
           .order('overall_score', { ascending: false, nullsFirst: false })
 
         if (error) throw error
-
         const tools = data || []
 
-        // 精选
         setFeaturedTools(tools.filter(t => (t.overall_score || 0) > 0).slice(0, 3))
         setAllTools(tools)
       } catch (e: any) {
@@ -221,7 +265,6 @@ export default function Home() {
     fetchTools()
   }, [])
 
-  // Filter and sort
   const filteredTools = allTools
     .filter(tool => {
       if (deployFilter === '全部') return true
@@ -241,7 +284,6 @@ export default function Home() {
       }
     })
 
-  // Group by date
   const groupedTools: { date: string; tools: Tool[] }[] = []
   const dateMap: Record<string, Tool[]> = {}
   filteredTools.forEach(tool => {
@@ -270,6 +312,41 @@ export default function Home() {
       </p>
 
       <Nav user={user} />
+
+      {/* Compare Bar */}
+      {compareIds.length > 0 && (
+        <div style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          background: 'rgba(0,217,255,0.15)',
+          border: '1px solid rgba(0,217,255,0.3)',
+          borderRadius: 12,
+          padding: '12px 20px',
+          marginBottom: 20,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <span style={{ color: '#fff', fontSize: 14 }}>
+            已选择 {compareIds.length}/3 个工具
+          </span>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button onClick={clearCompare} className="btn btn-outline" style={{ padding: '8px 16px', fontSize: 13 }}>
+              清除
+            </button>
+            <button
+              onClick={goCompare}
+              disabled={compareIds.length < 2}
+              className="btn"
+              style={{ padding: '8px 20px', fontSize: 13, opacity: compareIds.length < 2 ? 0.5 : 1 }}
+            >
+              🔍 对比
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div style={{
@@ -340,7 +417,7 @@ export default function Home() {
           )}
 
           <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
-            共 {filteredTools.length} 款工具
+            共 {filteredTools.length} 款工具（勾选工具后可对比）
           </p>
 
           {groupedTools.map(group => (
@@ -355,7 +432,14 @@ export default function Home() {
                 📅 {formatDate(group.date)}
                 <span style={{ color: '#666', fontSize: 14, marginLeft: 12 }}>{group.tools.length} 款工具</span>
               </h2>
-              {group.tools.map(tool => <ToolCard key={tool.id} tool={tool} />)}
+              {group.tools.map(tool => (
+                <ToolCard
+                  key={tool.id}
+                  tool={tool}
+                  selected={compareIds.includes(tool.id)}
+                  onToggle={toggleCompare}
+                />
+              ))}
             </div>
           ))}
 
