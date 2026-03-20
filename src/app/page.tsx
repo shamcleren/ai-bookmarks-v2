@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/components/AuthProvider'
 
 interface Tool {
   id: string
@@ -77,10 +78,31 @@ function ToolCard({ tool }: { tool: Tool }) {
   )
 }
 
+function Nav({ user }: { user: any }) {
+  return (
+    <div className="nav">
+      <a href="/" className="active">🏠 首页</a>
+      <a href="/rank">🏆 榜单</a>
+      {user ? (
+        <>
+          <a href="/favorites">⭐ 收藏</a>
+          <span style={{ color: '#666', padding: '12px 0' }}>|</span>
+          <span style={{ color: '#00ff88', padding: '12px 0' }}>
+            👤 {user.user_metadata?.full_name || user.email?.split('@')[0] || '已登录'}
+          </span>
+        </>
+      ) : (
+        <a href="/auth/login">登录</a>
+      )}
+    </div>
+  )
+}
+
 export default function Home() {
   const [tools, setTools] = useState<Tool[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const { user, loading: authLoading } = useAuth()
 
   useEffect(() => {
     const supabase = createClient()
@@ -122,14 +144,9 @@ export default function Home() {
         拒绝云评测，实测才是真
       </p>
 
-      <div className="nav">
-        <a href="/" className="active">🏠 首页</a>
-        <a href="/rank">🏆 榜单</a>
-        <a href="/favorites">⭐ 收藏</a>
-        <a href="/auth/login">登录</a>
-      </div>
+      <Nav user={user} />
 
-      {loading ? (
+      {loading || authLoading ? (
         <div style={{ textAlign: 'center', color: '#666', padding: 60 }}>
           加载中...
         </div>

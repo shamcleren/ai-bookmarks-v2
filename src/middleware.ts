@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const supabaseResponse = NextResponse.next({
+  let supabaseResponse = NextResponse.next({
     request,
   })
 
@@ -15,19 +15,16 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
           )
-          supabaseResponse.cookies.setAll(cookiesToSet)
         },
       },
     }
   )
 
-  // Use getSession for more reliable auth state check
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Protected routes
   if (!session && request.nextUrl.pathname.startsWith('/favorites')) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
