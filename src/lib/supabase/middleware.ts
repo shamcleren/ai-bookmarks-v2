@@ -6,35 +6,45 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value)
+            )
+            supabaseResponse = NextResponse.next({
+              request,
+            })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            )
+          },
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
+      }
+    )
+
+    // Refresh session if expired - with timeout
+    const { data: { user } } = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<{ data: { user: null } }>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 3000)
+      )
+    ]).catch(() => ({ data: { user: null } }))
+
+    // Protected routes
+    if (!user && request.nextUrl.pathname.startsWith('/favorites')) {
+      return NextResponse.redirect(new URL('/auth/login', request.url))
     }
-  )
-
-  // Refresh session if expired
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Protected routes
-  if (!user && request.nextUrl.pathname.startsWith('/favorites')) {
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+  } catch (error) {
+    // If Supabase is unavailable, continue without auth
+    console.error('Supabase error:', error)
   }
 
   return supabaseResponse
