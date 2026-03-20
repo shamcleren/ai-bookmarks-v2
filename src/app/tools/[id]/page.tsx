@@ -51,6 +51,27 @@ function ScoreBar({ label, score, max = 100 }: { label: string; score: number; m
   )
 }
 
+function StarRating({ value, onChange, readonly = false }: { value: number; onChange?: (v: number) => void; readonly?: boolean }) {
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      {[1, 2, 3, 4, 5].map(star => (
+        <span
+          key={star}
+          onClick={() => !readonly && onChange && onChange(star)}
+          style={{
+            fontSize: 24,
+            cursor: readonly ? 'default' : 'pointer',
+            color: star <= value ? '#ffc107' : '#444',
+            transition: 'color 0.2s'
+          }}
+        >
+          {star <= value ? '★' : '☆'}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function getDeployIcon(type: string) {
   switch (type) {
     case 'local': return '🖥️'
@@ -69,12 +90,15 @@ export default function ToolDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [favorited, setFavorited] = useState(false)
+  const [userRating, setUserRating] = useState(0)
+  const [avgRating, setAvgRating] = useState(0)
+  const [ratingCount, setRatingCount] = useState(0)
   const supabase = createClient()
 
   useEffect(() => {
     if (!id) return
 
-    async function fetchTool() {
+    async function fetchData() {
       try {
         const { data, error } = await supabase
           .from('tools')
@@ -85,7 +109,7 @@ export default function ToolDetail() {
         if (error) throw error
         setTool(data)
 
-        // 检查是否已收藏
+        // 检查收藏
         if (user) {
           const { data: favData } = await supabase
             .from('favorites')
@@ -94,6 +118,26 @@ export default function ToolDetail() {
             .eq('user_id', user.id)
             .single()
           setFavorited(!!favData)
+
+          // 检查用户评分
+          const { data: ratingData } = await supabase
+            .from('user_ratings')
+            .select('rating')
+            .eq('tool_id', id)
+            .eq('user_id', user.id)
+            .single()
+          if (ratingData) setUserRating(ratingData.rating)
+        }
+
+        // 获取平均评分
+        const { data: ratingsData } = await supabase
+          .from('user_ratings')
+          .select('rating')
+          .eq('tool_id', id)
+        if (ratingsData && ratingsData.length > 0) {
+          const avg = Math.round(ratingsData.reduce((sum, r) => sum + r.rating, 0) / ratingsData.length)
+          setAvgRating(avg)
+          setRatingCount(ratingsData.length)
         }
       } catch (e: any) {
         setError(e.message)
@@ -102,8 +146,46 @@ export default function ToolDetail() {
       }
     }
 
-    fetchTool()
+    fetchData()
   }, [id, user])
+
+  async function handleRate(rating: number) {
+    if (!user) {
+      window.location.href = '/auth/login'
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_ratings')
+        .upsert({ tool_id: id, user_id: user.id, rating, updated_at: new Date().toISOString() }, {
+          onConflict: 'user_id,tool_id'
+        })
+
+      if (error) throw error
+      setUserRating(rating)
+
+      // 重新获取平均
+      const { data: ratingsData } = await supabase
+        .from('user_ratings')
+        .select('rating')
+        .eq('tool_id', id)
+      if (ratingsData && ratingsData.length > 0) {
+        const avg = Math.round(ratingsData.reduce((sum, r) => sum + r.rating, 0) / ratingsData.length)
+        setAvgRating(avg)
+        setRatingCount(ratingsData.length)
+      }
+
+      // 更新工具的综合评分
+      const { data: toolData } = await supabase.from('tools').select('overall_score').eq('id', id).single()
+      if (toolData) {
+        await supabase.from('tools').update({ overall_score: avgRating * 20 }).eq('id', id)
+        setTool({ ...tool!, overall_score: avgRating * 20 })
+      }
+    } catch (e) {
+      console.error('评分失败:', e)
+    }
+  }
 
   async function toggleFavorite() {
     if (!user) {
@@ -142,7 +224,7 @@ export default function ToolDetail() {
 
       <div className="card" style={{ padding: 30 }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
           <div>
             <h1 style={{ fontSize: '1.8rem', marginBottom: 15 }}>{tool.name}</h1>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -156,11 +238,7 @@ export default function ToolDetail() {
                   📰 {tool.source || '来源'}
                 </a>
               )}
-              <button
-                onClick={toggleFavorite}
-                className={favorited ? 'btn' : 'btn btn-outline'}
-                style={{ cursor: 'pointer' }}
-              >
+              <button onClick={toggleFavorite} className={favorited ? 'btn' : 'btn btn-outline'} style={{ cursor: 'pointer' }}>
                 {favorited ? '⭐ 已收藏' : '☆ 收藏'}
               </button>
             </div>
@@ -183,7 +261,7 @@ export default function ToolDetail() {
               {getDeployIcon(tool.deploy_type)} {tool.deploy_type}
             </span>
           )}
-          {tool.suitable_for?.map((s, i) => (
+          {(tool.suitable_for || []).map((s, i) => (
             <span key={i} style={{ padding: '4px 12px', background: 'rgba(255,193,7,0.1)', color: '#ffc107', borderRadius: 12, fontSize: 12 }}>
               👤 {s}
             </span>
@@ -197,6 +275,33 @@ export default function ToolDetail() {
           {tool.price_model && <span>💰 {tool.price_model}</span>}
           {tool.commit_frequency && <span>📊 {tool.commit_frequency === 'high' ? '活跃' : tool.commit_frequency === 'medium' ? '一般' : '冷清'}</span>}
           {tool.platform && <span>💻 {tool.platform}</span>}
+        </div>
+
+        {/* 用户评分 */}
+        <div style={{
+          background: 'rgba(255,193,7,0.05)',
+          border: '1px solid rgba(255,193,7,0.15)',
+          borderRadius: 12,
+          padding: 20,
+          marginBottom: 25
+        }}>
+          <h3 style={{ color: '#ffc107', fontSize: '1rem', marginBottom: 12 }}>⭐ 你的评分</h3>
+          {avgRating > 0 && (
+            <p style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>
+              当前平均 {avgRating} 分（{ratingCount} 人评分）
+            </p>
+          )}
+          <StarRating value={userRating} onChange={handleRate} />
+          {userRating > 0 && (
+            <p style={{ color: '#00ff88', fontSize: 12, marginTop: 8 }}>
+              ✓ 已提交 {userRating} 星评分
+            </p>
+          )}
+          {!user && (
+            <p style={{ color: '#888', fontSize: 12, marginTop: 8 }}>
+              登录后可参与评分
+            </p>
+          )}
         </div>
 
         {/* 实测信息 */}
@@ -217,12 +322,7 @@ export default function ToolDetail() {
 
         {/* 5维评分 */}
         {(tool.ease_score > 0 || tool.useful_score > 0 || tool.hype_score > 0) && (
-          <div style={{
-            background: 'rgba(255,255,255,0.03)',
-            borderRadius: 12,
-            padding: 20,
-            marginBottom: 25
-          }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 20, marginBottom: 25 }}>
             <h3 style={{ color: '#00d9ff', fontSize: '1rem', marginBottom: 16 }}>📊 五维评分</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
               <div>
@@ -236,19 +336,9 @@ export default function ToolDetail() {
 
         {/* 优缺点 */}
         {(tool.pros?.length > 0 || tool.cons?.length > 0) && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 16,
-            marginBottom: 25
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 25 }}>
             {tool.pros?.length > 0 && (
-              <div style={{
-                background: 'rgba(0,255,136,0.05)',
-                border: '1px solid rgba(0,255,136,0.15)',
-                borderRadius: 12,
-                padding: 16
-              }}>
+              <div style={{ background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: 12, padding: 16 }}>
                 <h3 style={{ color: '#00ff88', fontSize: '0.95rem', marginBottom: 12 }}>✅ 优点</h3>
                 <ul style={{ paddingLeft: 16, color: '#ccc', fontSize: 14, lineHeight: 1.8 }}>
                   {tool.pros.map((p, i) => <li key={i}>{p}</li>)}
@@ -256,12 +346,7 @@ export default function ToolDetail() {
               </div>
             )}
             {tool.cons?.length > 0 && (
-              <div style={{
-                background: 'rgba(255,107,107,0.05)',
-                border: '1px solid rgba(255,107,107,0.15)',
-                borderRadius: 12,
-                padding: 16
-              }}>
+              <div style={{ background: 'rgba(255,107,107,0.05)', border: '1px solid rgba(255,107,107,0.15)', borderRadius: 12, padding: 16 }}>
                 <h3 style={{ color: '#ff6b6b', fontSize: '0.95rem', marginBottom: 12 }}>❌ 缺点</h3>
                 <ul style={{ paddingLeft: 16, color: '#ccc', fontSize: 14, lineHeight: 1.8 }}>
                   {tool.cons.map((c, i) => <li key={i}>{c}</li>)}

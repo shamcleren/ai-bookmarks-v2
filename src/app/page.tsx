@@ -11,7 +11,6 @@ interface Tool {
   url: string
   description: string
   source: string
-  source_url: string
   tags: string[]
   can_test: boolean
   status: string
@@ -71,14 +70,7 @@ function ToolCard({ tool }: { tool: Tool }) {
             {tool.name}
           </a>
         </h3>
-        <span style={{
-          padding: '4px 10px',
-          borderRadius: 6,
-          fontSize: 12,
-          fontWeight: 600,
-          background: level.bg,
-          color: level.color
-        }}>
+        <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: level.bg, color: level.color }}>
           {level.label}
         </span>
       </div>
@@ -138,14 +130,7 @@ function FeaturedCard({ tool }: { tool: Tool }) {
       minWidth: 280
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{
-          padding: '4px 10px',
-          borderRadius: 6,
-          fontSize: 12,
-          fontWeight: 600,
-          background: 'rgba(0,255,136,0.2)',
-          color: '#00ff88'
-        }}>
+        <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: 'rgba(0,255,136,0.2)', color: '#00ff88' }}>
           ⭐ 精选
         </span>
         <span style={{ fontSize: 28, fontWeight: 'bold', color: '#ffc107' }}>{score}</span>
@@ -167,11 +152,7 @@ function FeaturedCard({ tool }: { tool: Tool }) {
 
 function formatDate(dateStr: string) {
   const date = new Date(dateStr)
-  return date.toLocaleDateString('zh-CN', {
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long'
-  })
+  return date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
 }
 
 function Nav({ user }: { user: any }) {
@@ -194,17 +175,25 @@ function Nav({ user }: { user: any }) {
   )
 }
 
-interface GroupedTools {
-  date: string
-  tools: Tool[]
-}
+const DEPLOY_FILTERS = ['全部', '本地', '云端', 'API', '浏览器']
+const SORT_OPTIONS = [
+  { value: 'overall_score', label: '综合评分' },
+  { value: 'stars', label: 'GitHub Stars' },
+  { value: 'created_at', label: '最新收录' },
+  { value: 'commit_frequency', label: '活跃度' },
+]
 
 export default function Home() {
-  const [groupedTools, setGroupedTools] = useState<GroupedTools[]>([])
+  const [allTools, setAllTools] = useState<Tool[]>([])
   const [featuredTools, setFeaturedTools] = useState<Tool[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const { user, loading: authLoading } = useAuth()
+
+  // Filters
+  const [deployFilter, setDeployFilter] = useState('全部')
+  const [sortBy, setSortBy] = useState('overall_score')
+
   const supabase = createClient()
 
   useEffect(() => {
@@ -213,33 +202,17 @@ export default function Home() {
         const { data, error } = await supabase
           .from('tools')
           .select('*')
-          .order('overall_score', { ascending: false })
-          .limit(50)
+          .order('overall_score', { ascending: false, nullsFirst: false })
 
         if (error) throw error
 
-        // 精选：综合评分最高的3个
-        const featured = (data || [])
-          .filter(t => (t.overall_score || 0) > 0)
-          .slice(0, 3)
-        setFeaturedTools(featured)
+        const tools = data || []
 
-        // 按日期分组
-        const groups: { [key: string]: Tool[] } = {}
-        ;(data || []).forEach(tool => {
-          const date = tool.created_at?.split('T')[0] || 'unknown'
-          if (!groups[date]) groups[date] = []
-          groups[date].push(tool)
-        })
-
-        const result = Object.entries(groups)
-          .sort(([a], [b]) => b.localeCompare(a))
-          .map(([date, tools]) => ({ date, tools }))
-
-        setGroupedTools(result)
+        // 精选
+        setFeaturedTools(tools.filter(t => (t.overall_score || 0) > 0).slice(0, 3))
+        setAllTools(tools)
       } catch (e: any) {
-        console.error('Error fetching tools:', e)
-        setError(e.message || '加载失败')
+        setError(e.message)
       } finally {
         setLoading(false)
       }
@@ -247,6 +220,38 @@ export default function Home() {
 
     fetchTools()
   }, [])
+
+  // Filter and sort
+  const filteredTools = allTools
+    .filter(tool => {
+      if (deployFilter === '全部') return true
+      const map: Record<string, string> = { '本地': 'local', '云端': 'cloud', 'API': 'api', '浏览器': 'browser' }
+      return tool.deploy_type === map[deployFilter]
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'overall_score': return (b.overall_score || 0) - (a.overall_score || 0)
+        case 'stars': return b.stars - a.stars
+        case 'created_at': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        case 'commit_frequency': {
+          const order: Record<string, number> = { 'high': 3, 'medium': 2, 'low': 1, 'unknown': 0 }
+          return (order[b.commit_frequency || 'unknown'] || 0) - (order[a.commit_frequency || 'unknown'] || 0)
+        }
+        default: return 0
+      }
+    })
+
+  // Group by date
+  const groupedTools: { date: string; tools: Tool[] }[] = []
+  const dateMap: Record<string, Tool[]> = {}
+  filteredTools.forEach(tool => {
+    const date = tool.created_at?.split('T')[0] || 'unknown'
+    if (!dateMap[date]) dateMap[date] = []
+    dateMap[date].push(tool)
+  })
+  Object.entries(dateMap).sort(([a], [b]) => b.localeCompare(a)).forEach(([date, tools]) => {
+    groupedTools.push({ date, tools })
+  })
 
   return (
     <div className="container">
@@ -266,28 +271,77 @@ export default function Home() {
 
       <Nav user={user} />
 
+      {/* Filters */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 30,
+        flexWrap: 'wrap',
+        gap: 16
+      }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {DEPLOY_FILTERS.map(f => (
+            <button
+              key={f}
+              onClick={() => setDeployFilter(f)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 20,
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+                background: deployFilter === f ? 'rgba(0,217,255,0.2)' : 'rgba(255,255,255,0.05)',
+                color: deployFilter === f ? '#00d9ff' : '#888',
+                transition: 'all 0.2s'
+              }}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ color: '#666', fontSize: 13 }}>排序：</span>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            style={{
+              padding: '8px 16px',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8,
+              color: '#fff',
+              fontSize: 13,
+              cursor: 'pointer'
+            }}
+          >
+            {SORT_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {loading || authLoading ? (
         <div style={{ textAlign: 'center', color: '#666', padding: 60 }}>加载中...</div>
       ) : error ? (
         <div style={{ textAlign: 'center', color: '#ff6b6b', padding: 60 }}>加载失败: {error}</div>
       ) : (
         <>
-          {featuredTools.length > 0 && (
+          {featuredTools.length > 0 && deployFilter === '全部' && sortBy === 'overall_score' && (
             <div style={{ marginBottom: 40 }}>
-              <h2 style={{ fontSize: '1.2rem', marginBottom: 20, color: '#00d9ff' }}>
-                ⭐ 本期精选
-              </h2>
+              <h2 style={{ fontSize: '1.2rem', marginBottom: 20, color: '#00d9ff' }}>⭐ 本期精选</h2>
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                {featuredTools.map(tool => (
-                  <FeaturedCard key={tool.id} tool={tool} />
-                ))}
+                {featuredTools.map(tool => <FeaturedCard key={tool.id} tool={tool} />)}
               </div>
             </div>
           )}
 
-          {groupedTools.length === 0 && featuredTools.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#666', padding: 60 }}>暂无数据</div>
-          )}
+          <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
+            共 {filteredTools.length} 款工具
+          </p>
 
           {groupedTools.map(group => (
             <div key={group.date} style={{ marginBottom: 40 }}>
@@ -299,15 +353,15 @@ export default function Home() {
                 color: '#00d9ff'
               }}>
                 📅 {formatDate(group.date)}
-                <span style={{ color: '#666', fontSize: 14, marginLeft: 12 }}>
-                  {group.tools.length} 款工具
-                </span>
+                <span style={{ color: '#666', fontSize: 14, marginLeft: 12 }}>{group.tools.length} 款工具</span>
               </h2>
-              {group.tools.map(tool => (
-                <ToolCard key={tool.id} tool={tool} />
-              ))}
+              {group.tools.map(tool => <ToolCard key={tool.id} tool={tool} />)}
             </div>
           ))}
+
+          {groupedTools.length === 0 && (
+            <div style={{ textAlign: 'center', color: '#666', padding: 60 }}>暂无匹配的工具</div>
+          )}
         </>
       )}
     </div>
