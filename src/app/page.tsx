@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { nameToSlug } from '@/lib/utils'
 import { useAuth } from '@/components/AuthProvider'
+import Calendar from '@/components/Calendar'
 
 interface Tool {
   id: string
@@ -286,16 +287,26 @@ export default function Home() {
       }
     })
 
-  const groupedTools: { date: string; tools: Tool[] }[] = []
-  const dateMap: Record<string, Tool[]> = {}
-  filteredTools.forEach(tool => {
-    const date = tool.created_at?.split('T')[0] || 'unknown'
-    if (!dateMap[date]) dateMap[date] = []
-    dateMap[date].push(tool)
-  })
-  Object.entries(dateMap).sort(([a], [b]) => b.localeCompare(a)).forEach(([date, tools]) => {
-    groupedTools.push({ date, tools })
-  })
+  // Build set of dates that have tools
+  const activeDates = useMemo(() => {
+    const set = new Set<string>()
+    allTools.forEach(tool => {
+      const d = tool.created_at?.split('T')[0]
+      if (d) set.add(d)
+    })
+    return set
+  }, [allTools])
+
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+
+  // Tools to display: filtered by selected date (if any), then sorted
+  const displayTools = useMemo(() => {
+    let tools = filteredTools
+    if (selectedDate) {
+      tools = tools.filter(t => t.created_at?.startsWith(selectedDate))
+    }
+    return tools
+  }, [filteredTools, selectedDate])
 
   return (
     <div className="container">
@@ -418,35 +429,51 @@ export default function Home() {
             </div>
           )}
 
-          <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
-            共 {filteredTools.length} 款工具（勾选工具后可对比）
-          </p>
+          {/* Calendar */}
+          <Calendar
+            activeDates={activeDates}
+            selectedDate={selectedDate}
+            onSelectDate={date => setSelectedDate(prev => prev === date ? null : date)}
+          />
 
-          {groupedTools.map(group => (
-            <div key={group.date} style={{ marginBottom: 40 }}>
-              <h2 style={{
-                fontSize: '1.2rem',
-                marginBottom: 20,
-                paddingBottom: 10,
-                borderBottom: '1px solid rgba(255,255,255,0.1)',
-                color: '#00d9ff'
-              }}>
-                📅 {formatDate(group.date)}
-                <span style={{ color: '#666', fontSize: 14, marginLeft: 12 }}>{group.tools.length} 款工具</span>
-              </h2>
-              {group.tools.map(tool => (
-                <ToolCard
-                  key={tool.id}
-                  tool={tool}
-                  selected={compareIds.includes(tool.id)}
-                  onToggle={toggleCompare}
-                />
-              ))}
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+            <p style={{ color: '#666', fontSize: 14 }}>
+              {selectedDate
+                ? `📅 ${formatDate(selectedDate)} — 共 ${displayTools.length} 款工具`
+                : `共 ${filteredTools.length} 款工具（勾选工具后可对比）`
+              }
+            </p>
+            {selectedDate && (
+              <button
+                onClick={() => setSelectedDate(null)}
+                style={{
+                  background: 'rgba(0,217,255,0.1)',
+                  border: '1px solid rgba(0,217,255,0.2)',
+                  borderRadius: 8,
+                  color: '#00d9ff',
+                  padding: '6px 14px',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                显示全部
+              </button>
+            )}
+          </div>
+
+          {displayTools.map(tool => (
+            <ToolCard
+              key={tool.id}
+              tool={tool}
+              selected={compareIds.includes(tool.id)}
+              onToggle={toggleCompare}
+            />
           ))}
 
-          {groupedTools.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#666', padding: 60 }}>暂无匹配的工具</div>
+          {displayTools.length === 0 && (
+            <div style={{ textAlign: 'center', color: '#666', padding: 60 }}>
+              {selectedDate ? '该日期暂无工具数据' : '暂无匹配的工具'}
+            </div>
           )}
         </>
       )}

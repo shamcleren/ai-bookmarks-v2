@@ -81,7 +81,7 @@ async function syncTools() {
             'apikey': SUPABASE_KEY,
             'Authorization': `Bearer ${SUPABASE_KEY}`,
             'Prefer': 'resolution=merge-duplicates',
-            'Upsert': `name=eq.${tool.name}`  // 按 name 去重
+            'Upsert': `name=eq.${encodeURIComponent(tool.name)}`  // 按 name 去重
           },
           body: JSON.stringify(payload)
         })
