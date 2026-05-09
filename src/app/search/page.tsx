@@ -18,6 +18,13 @@ interface Tool {
   deploy_type: string
 }
 
+
+function highlightText(text: string, query: string) {
+  if (!query.trim()) return text
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+  return text.replace(regex, '<mark style="background:rgba(0,217,255,0.25);color:#fff;padding:0 2px;border-radius:2px">$1</mark>')
+}
+
 function getDeployIcon(type: string) {
   switch (type) {
     case 'local': return '🖥️'
@@ -53,7 +60,7 @@ function SearchContent() {
       const { data, error } = await supabase
         .from('tools')
         .select('id, name, url, description, tags, stars, overall_score, verdict, deploy_type')
-        .or(`name.ilike.%${q}%,description.ilike.%${q}%`)
+        .or(`name.ilike.%${q}%,description.ilike.%${q}%,tags.cs.{${q}},verdict.ilike.%${q}%`)
         .order('overall_score', { ascending: false })
         .limit(20)
 
@@ -119,7 +126,7 @@ function SearchContent() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                   <h3 style={{ fontSize: 16 }}>
                     <a href={tool.url} target="_blank" rel="noopener noreferrer" style={{ color: '#00d9ff' }}>
-                      {tool.name}
+                      <span dangerouslySetInnerHTML={{__html: highlightText(tool.name, query)}} />
                     </a>
                   </h3>
                   <span style={{ color: '#ffc107', fontSize: 20, fontWeight: 'bold' }}>
@@ -127,7 +134,7 @@ function SearchContent() {
                   </span>
                 </div>
                 <p style={{ color: '#999', fontSize: 13, marginBottom: 8 }}>
-                  {tool.description?.slice(0, 150)}...
+                  <span dangerouslySetInnerHTML={{__html: highlightText(tool.description?.slice(0, 150) || '', query)}} />...
                 </p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
                   {(tool.tags || []).map(tag => (
