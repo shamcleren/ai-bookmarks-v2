@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 
 interface CalendarProps {
   /** Set of date strings (YYYY-MM-DD) that have data */
@@ -34,6 +34,7 @@ export default function Calendar({ activeDates, onSelectDate, selectedDate }: Ca
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
+  const [expanded, setExpanded] = useState(false)
 
   const daysInMonth = getDaysInMonth(year, month)
   const firstDay = getFirstDayOfMonth(year, month)
@@ -55,23 +56,47 @@ export default function Calendar({ activeDates, onSelectDate, selectedDate }: Ca
     else setMonth(m => m + 1)
   }
 
+  const toggleExpand = useCallback(() => {
+    setExpanded(prev => !prev)
+  }, [])
+
   const isToday = (day: number) =>
     year === today.getFullYear() && month === today.getMonth() && day === today.getDate()
+
+  // Compact view: just show month/year and toggle button
+  if (!expanded) {
+    return (
+      <div style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 12,
+        padding: '12px 16px',
+        marginBottom: 20,
+        cursor: 'pointer',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }} onClick={toggleExpand}>
+        <span style={{ color: '#888', fontSize: 14 }}>📅 {formatYM(year, month)}</span>
+        <span style={{ color: '#666', fontSize: 12 }}>展开日历 ▼</span>
+      </div>
+    )
+  }
 
   return (
     <div style={{
       background: 'rgba(255,255,255,0.03)',
       border: '1px solid rgba(255,255,255,0.08)',
       borderRadius: 16,
-      padding: 20,
-      marginBottom: 30,
+      padding: 16,
+      marginBottom: 20,
     }}>
       {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 12,
       }}>
         <button
           onClick={prevMonth}
