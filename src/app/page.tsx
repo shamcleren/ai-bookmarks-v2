@@ -213,6 +213,7 @@ export default function Home() {
   const [deployFilter, setDeployFilter] = useState('全部')
   const [sortBy, setSortBy] = useState('overall_score')
   const [compareIds, setCompareIds] = useState<string[]>([])
+  const [sortOpen, setSortOpen] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -224,7 +225,15 @@ export default function Home() {
     } catch {}
   }, [])
 
-  const toggleCompare = useCallback((id: string) => {
+  // 点击外部关闭排序下拉
+  useEffect(() => {
+    if (!sortOpen) return
+    const handler = () => setSortOpen(false)
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [sortOpen])
+
+    const toggleCompare = useCallback((id: string) => {
     setCompareIds(prev => {
       const next = prev.includes(id)
         ? prev.filter(i => i !== id)
@@ -401,25 +410,67 @@ export default function Home() {
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', position: 'relative' }}>
           <span style={{ color: '#666', fontSize: 13 }}>排序：</span>
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-            style={{
-              padding: '8px 16px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8,
-              color: '#fff',
-              fontSize: 13,
-              cursor: 'pointer'
-            }}
-          >
-            {SORT_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          <div style={{ position: 'relative' }}>
+            <div
+              onClick={() => setSortOpen(o => !o)}
+              style={{
+                padding: '8px 16px',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 8,
+                color: '#fff',
+                fontSize: 13,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                userSelect: 'none',
+              }}
+            >
+              <span>{SORT_OPTIONS.find(o => o.value === sortBy)?.label}</span>
+              <span style={{ fontSize: 10, opacity: 0.5 }}>{sortOpen ? '▲' : '▼'}</span>
+            </div>
+            {sortOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: 4,
+                background: '#1a1a2e',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 10,
+                overflow: 'hidden',
+                zIndex: 300,
+                minWidth: 140,
+                boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
+              }}>
+                {SORT_OPTIONS.map(o => (
+                  <div
+                    key={o.value}
+                    onClick={() => { setSortBy(o.value); setSortOpen(false) }}
+                    style={{
+                      padding: '10px 16px',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      color: sortBy === o.value ? '#00d9ff' : '#ccc',
+                      background: sortBy === o.value ? 'rgba(0,217,255,0.12)' : 'transparent',
+                      transition: 'background 0.12s',
+                    }}
+                    onMouseEnter={e => {
+                      if (sortBy !== o.value) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+                    }}
+                    onMouseLeave={e => {
+                      if (sortBy !== o.value) e.currentTarget.style.background = 'transparent'
+                    }}
+                  >
+                    {o.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
