@@ -388,7 +388,7 @@ export default function Home() {
         flexWrap: 'wrap',
         gap: 16
       }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="filter-bar" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {DEPLOY_FILTERS.map(f => (
             <button
               key={f}

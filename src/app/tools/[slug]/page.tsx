@@ -95,6 +95,7 @@ export default function ToolDetail() {
   const [userRating, setUserRating] = useState(0)
   const [avgRating, setAvgRating] = useState(0)
   const [ratingCount, setRatingCount] = useState(0)
+  const [relatedTools, setRelatedTools] = useState<any[]>([])
   const supabase = createClient()
 
   useEffect(() => {
@@ -141,6 +142,18 @@ export default function ToolDetail() {
           const avg = Math.round(ratingsData.reduce((sum, r) => sum + r.rating, 0) / ratingsData.length)
           setAvgRating(avg)
           setRatingCount(ratingsData.length)
+        }
+
+        // 获取相关工具（同标签，排除自己）
+        if (data?.tags?.length > 0) {
+          const { data: related } = await supabase
+            .from('tools')
+            .select('id, name, url, description, tags, stars, overall_score, deploy_type')
+            .neq('id', toolId)
+            .overlaps('tags', data.tags)
+            .order('overall_score', { ascending: false })
+            .limit(4)
+          if (related) setRelatedTools(related)
         }
       } catch (e: any) {
         setError(e.message)
