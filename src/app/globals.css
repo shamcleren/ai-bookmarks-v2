@@ -160,3 +160,21 @@ a:hover {
     padding: 14px;
   }
 }
+
+/* Dark-themed select dropdown */
+select {
+  background-color: rgba(26, 26, 46, 0.95);
+  color: #fff;
+}
+
+select option {
+  background-color: #1a1a2e;
+  color: #fff;
+  padding: 8px 12px;
+}
+
+select option:hover,
+select option:checked {
+  background-color: rgba(0, 217, 255, 0.2);
+  color: #00d9ff;
+}
