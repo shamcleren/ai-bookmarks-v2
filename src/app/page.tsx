@@ -297,7 +297,16 @@ export default function Home() {
     return set
   }, [allTools])
 
+  // 默认选中最新有数据的日期
+  const latestDate = useMemo(() => {
+    if (activeDates.size === 0) return null
+    return Array.from(activeDates).sort().pop() || null
+  }, [activeDates])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  // 首次加载后自动选中最新日期
+  useEffect(() => {
+    if (latestDate && selectedDate === null) setSelectedDate(latestDate)
+  }, [latestDate])
 
   // Tools to display: filtered by selected date (if any), then sorted
   const displayTools = useMemo(() => {
@@ -439,26 +448,10 @@ export default function Home() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
             <p style={{ color: '#666', fontSize: 14 }}>
               {selectedDate
-                ? `📅 ${formatDate(selectedDate)} — 共 ${displayTools.length} 款工具`
+                ? `共 ${displayTools.length} 款工具`
                 : `共 ${filteredTools.length} 款工具（勾选工具后可对比）`
               }
             </p>
-            {selectedDate && (
-              <button
-                onClick={() => setSelectedDate(null)}
-                style={{
-                  background: 'rgba(0,217,255,0.1)',
-                  border: '1px solid rgba(0,217,255,0.2)',
-                  borderRadius: 8,
-                  color: '#00d9ff',
-                  padding: '6px 14px',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                }}
-              >
-                显示全部
-              </button>
-            )}
           </div>
 
           {displayTools.map(tool => (
