@@ -107,6 +107,7 @@ export default function ToolDetail() {
 
     async function fetchData() {
       try {
+        // 先取工具主体
         const { data, error } = await supabase
           .from('tools')
           .select('*')
@@ -116,45 +117,47 @@ export default function ToolDetail() {
         if (error) throw error
         setTool(data)
 
-        if (user) {
-          const { data: favData } = await supabase
-            .from('favorites')
-            .select('id')
-            .eq('tool_id', toolId)
-            .eq('user_id', user.id)
-            .single()
-          setFavorited(!!favData)
+        // 剩余请求全部并行
+        const promises: any[] = [
+          supabase.from('user_ratings').select('rating').eq('tool_id', toolId),
+        ]
 
-          const { data: ratingData } = await supabase
-            .from('user_ratings')
-            .select('rating')
-            .eq('tool_id', toolId)
-            .eq('user_id', user.id)
-            .single()
-          if (ratingData) setUserRating(ratingData.rating)
+        if (user) {
+          promises.push(
+            supabase.from('favorites').select('id').eq('tool_id', toolId).eq('user_id', user.id).maybeSingle(),
+            supabase.from('user_ratings').select('rating').eq('tool_id', toolId).eq('user_id', user.id).maybeSingle(),
+          )
         }
 
-        const { data: ratingsData } = await supabase
-          .from('user_ratings')
-          .select('rating')
-          .eq('tool_id', toolId)
+        if (data?.tags?.length > 0) {
+          promises.push(
+            supabase
+              .from('tools')
+              .select('id, name, url, description, tags, stars, overall_score, deploy_type')
+              .neq('id', toolId)
+              .overlaps('tags', data.tags)
+              .order('overall_score', { ascending: false })
+              .limit(4),
+          )
+        }
+
+        const results = await Promise.all(promises)
+
+        // 解析结果
+        const ratingsData = results[0].data
         if (ratingsData && ratingsData.length > 0) {
-          const avg = Math.round(ratingsData.reduce((sum, r) => sum + r.rating, 0) / ratingsData.length)
+          const avg = Math.round(ratingsData.reduce((sum: number, r: any) => sum + r.rating, 0) / ratingsData.length)
           setAvgRating(avg)
           setRatingCount(ratingsData.length)
         }
 
-        // 获取相关工具（同标签，排除自己）
-        if (data?.tags?.length > 0) {
-          const { data: related } = await supabase
-            .from('tools')
-            .select('id, name, url, description, tags, stars, overall_score, deploy_type')
-            .neq('id', toolId)
-            .overlaps('tags', data.tags)
-            .order('overall_score', { ascending: false })
-            .limit(4)
-          if (related) setRelatedTools(related)
+        if (user) {
+          setFavorited(!!results[1]?.data)
+          if (results[2]?.data) setUserRating(results[2].data.rating)
         }
+
+        const relatedIdx = user ? 3 : 1
+        if (results[relatedIdx]?.data) setRelatedTools(results[relatedIdx].data)
       } catch (e: any) {
         setError(e.message)
       } finally {
