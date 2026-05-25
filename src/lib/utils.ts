@@ -31,13 +31,10 @@ export function getToolUrl(id: string, name: string): string {
  * /tools/123-obra-superpowers → 123
  */
 export function extractToolIdFromSlug(slug: string): string | null {
-  const match = slug.match(/^([a-f0-9-]+)-/i)
-  if (match) {
-    // 检查第一个分段是否是 UUID 格式
-    const possibleId = match[1]
-    if (possibleId.includes('-') && possibleId.length > 20) {
-      return possibleId
-    }
+  // UUID 格式: 8-4-4-4-12 十六进制字符（精确匹配，避免贪心吞掉 slug 名称）
+  const uuidMatch = slug.match(/^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i)
+  if (uuidMatch) {
+    return uuidMatch[1]
   }
   // fallback: 整个 slug 当 ID（兼容旧版 URL）
   return slug
