@@ -177,11 +177,13 @@ export default function ToolDetail() {
 
   // 测评截图
   const evalImages = [
-    { src: `/eval/${tool.name}/test-ui-input.png`, label: '测试输入图', sub: '750×1334 会员页 UI' },
-    { src: `/eval/${tool.name}/bbox_preview.png`, label: 'bbox 标注预览', sub: '3 个红框精确标注' },
-    { src: `/eval/${tool.name}/icon-back.png`, label: 'icon-back', sub: '60×56 · 2x · RGBA' },
-    { src: `/eval/${tool.name}/icon-settings.png`, label: 'icon-settings', sub: '84×84 · 3x · RGBA' },
-    { src: `/eval/${tool.name}/card-avatar.png`, label: 'card-avatar', sub: '156×156 · 3x · RGBA' },
+    { src: `/eval/${tool.name}/test-ui-input.png`, label: '测试输入图', sub: '2240×1840 CodePal 仪表盘' },
+    { src: `/eval/${tool.name}/bbox_preview.png`, label: 'bbox 标注预览', sub: '8 个区域精确标注' },
+    { src: `/eval/${tool.name}/logo-codepal.png`, label: 'Logo', sub: '420×120 · 3x · corners 抠底' },
+    { src: `/eval/${tool.name}/nav-bar.png`, label: '导航栏', sub: '1500×72 · 2x' },
+    { src: `/eval/${tool.name}/chart-tokens.png`, label: 'Token 消费图表', sub: '960×390 · 2x' },
+    { src: `/eval/${tool.name}/chart-gate.png`, label: 'Gate 统计', sub: '450×390 · 2x' },
+    { src: `/eval/${tool.name}/chart-codex-pts.png`, label: 'Codex Pts 图表', sub: '700×280 · 2x' },
   ]
 
   return (
