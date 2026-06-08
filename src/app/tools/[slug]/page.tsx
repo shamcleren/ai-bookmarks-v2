@@ -184,6 +184,7 @@ export default function ToolDetail() {
     { src: `/eval/${tool.name}/chart-tokens.png`, label: 'Token 消费图表', sub: '960×390 · 2x' },
     { src: `/eval/${tool.name}/chart-gate.png`, label: 'Gate 统计', sub: '450×390 · 2x' },
     { src: `/eval/${tool.name}/chart-codex-pts.png`, label: 'Codex Pts 图表', sub: '700×280 · 2x' },
+    { src: `/eval/${tool.name}/code-preview.png`, label: '代码还原预览', sub: 'HTML/CSS 完整还原效果' },
   ]
 
   return (

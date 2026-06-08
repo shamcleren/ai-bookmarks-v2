@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodePal Dashboard — image-to-code 还原</title>
+<style>
+:root {
+  --board-w: 750;
+  --board-h: 616;
+  --board-scale: min(1, calc(100vw / (var(--board-w) * 1px)));
+  --bg-card: #1a1e20;
+  --bg-dark: #131619;
+  --text-dim: #6b7280;
+  --text-bright: #e5e7eb;
+  --accent-blue: #3b82f6;
+  --accent-green: #10b981;
+  --accent-purple: #8b5cf6;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+.fit-shell {
+  width: 100%;
+  display: grid;
+  place-items: start center;
+  overflow-x: clip;
+  background: #0a0c0e;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+.fit-box {
+  width: calc(var(--board-w) * 1px * var(--board-scale));
+  height: calc(var(--board-h) * 1px * var(--board-scale));
+  overflow: hidden;
+}
+
+.artboard {
+  position: relative;
+  width: calc(var(--board-w) * 1px);
+  height: calc(var(--board-h) * 1px);
+  transform: scale(var(--board-scale));
+  transform-origin: top left;
+  background: #0f1214;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* ===== Header ===== */
+.header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 85px;
+  background: #111518;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+}
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo-icon {
+  width: 18px; height: 18px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  border-radius: 4px;
+}
+.logo-text {
+  font-size: 16px; font-weight: 700;
+  background: linear-gradient(135deg, #e5e7eb, #9ca3af);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* ===== Navigation ===== */
+.nav {
+  position: absolute;
+  top: 85px; left: 0; right: 0;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-size: 11px;
+  color: #6b7280;
+}
+.nav-item { cursor: default; }
+.nav-item.active { color: #e5e7eb; font-weight: 600; }
+
+/* ===== Metric Cards ===== */
+.metrics {
+  position: absolute;
+  top: 120px; left: 16px; right: 16px;
+  height: 50px;
+  display: flex;
+  gap: 12px;
+}
+.metric-card {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.metric-label {
+  font-size: 9px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.metric-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e5e7eb;
+  line-height: 1.1;
+}
+.metric-change {
+  font-size: 9px;
+  margin-top: 1px;
+}
+.metric-up { color: var(--accent-green); }
+.metric-down { color: #ef4444; }
+
+/* ===== Main Chart Area ===== */
+.main-charts {
+  position: absolute;
+  top: 180px; left: 16px; right: 16px;
+  height: 180px;
+  display: flex;
+  gap: 12px;
+}
+.chart-box {
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.chart-box.token-chart { width: 480px; }
+.chart-box.gate-chart { flex: 1; }
+
+.chart-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-bottom: 4px;
+}
+.chart-subtitle {
+  font-size: 9px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+/* Token chart bars */
+.bar-chart {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding-bottom: 4px;
+}
+.bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.bar-label { font-size: 8px; color: #6b7280; }
+.bar-track {
+  flex: 1; width: 100%;
+  background: rgba(255,255,255,0.03);
+  border-radius: 3px 3px 0 0;
+  position: relative;
+  overflow: hidden;
+}
+.bar-fill {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+.bar-codex  { background: linear-gradient(180deg, var(--accent-blue), rgba(59,130,246,0.3)); }
+.bar-agent { background: linear-gradient(180deg, var(--accent-purple), rgba(139,92,246,0.3)); }
+.bar-other { background: linear-gradient(180deg, #374151, rgba(55,65,81,0.3)); }
+
+/* Gate stats */
+.gate-stats {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+.gate-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.gate-label { font-size: 11px; color: #9ca3af; }
+.gate-val  { font-size: 16px; font-weight: 700; color: #e5e7eb; }
+
+/* ===== Secondary Charts ===== */
+.secondary-charts {
+  position: absolute;
+  top: 372px; left: 16px; right: 16px;
+  height: 135px;
+  display: flex;
+  gap: 12px;
+}
+.sec-chart {
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 12px;
+  flex: 1;
+}
+.sec-title {
+  font-size: 11px; font-weight: 600;
+  color: #e5e7eb; margin-bottom: 8px;
+}
+.legend { display: flex; gap: 10px; margin-top: 8px; font-size: 9px; }
+.legend-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* ===== Agent/Model bar ===== */
+.agent-bar {
+  position: absolute;
+  bottom: 0; left: 16px; right: 16px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid rgba(255,255,255,0.03);
+}
+.agent-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 20px;
+  font-size: 10px;
+  color: #9ca3af;
+}
+.agent-pill .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.agent-pill .count {
+  font-weight: 700;
+  color: #e5e7eb;
+  margin-left: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bar-fill { transition: height 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+}
+</style>
+</head>
+<body>
+<div class="fit-shell">
+  <div class="fit-box">
+    <div class="artboard">
+
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-area">
+          <div class="logo-icon"></div>
+          <span class="logo-text">CodePal</span>
+        </div>
+        <div class="header-right">
+          <span>📊 Sessions</span>
+          <span>📈 Analytics</span>
+          <span>🔍 Work Review</span>
+          <span>⚙️</span>
+        </div>
+      </div>
+
+      <!-- Nav -->
+      <div class="nav">
+        <span class="nav-item active">Overview</span>
+        <span class="nav-item">Sessions</span>
+        <span class="nav-item">Models</span>
+        <span class="nav-item">Agents</span>
+        <span class="nav-item">Projects</span>
+        <span class="nav-item">Cost</span>
+      </div>
+
+      <!-- Metric Cards -->
+      <div class="metrics">
+        <div class="metric-card">
+          <span class="metric-label">Total Tokens</span>
+          <span class="metric-value">200k</span>
+          <span class="metric-change metric-up">▲ 12%</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Sessions</span>
+          <span class="metric-value">1,247</span>
+          <span class="metric-change metric-up">▲ 8%</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Avg / Session</span>
+          <span class="metric-value">160</span>
+          <span class="metric-change metric-down">▼ 3%</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Active Agents</span>
+          <span class="metric-value">14</span>
+          <span class="metric-change metric-up">▲ 2</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Cost Today</span>
+          <span class="metric-value">$4.20</span>
+          <span class="metric-change metric-down">▼ 15%</span>
+        </div>
+      </div>
+
+      <!-- Main Charts -->
+      <div class="main-charts">
+        <div class="chart-box token-chart">
+          <div class="chart-title">Token Consumption</div>
+          <div class="chart-subtitle">Aggregated from JSONL logs</div>
+          <div class="bar-chart">
+            <div class="bar-col"><div class="bar-track"><div class="bar-fill bar-codex" style="height:70%"></div></div><span class="bar-label">00:00</span></div>
+            <div class="bar-col"><div class="bar-track"><div class="bar-fill bar-codex" style="height:55%"></div></div><span class="bar-label">04:00</span></div>
+            <div class="bar-col"><div class="bar-track"><div class="bar-fill bar-agent" style="height:85%"></div></div><span class="bar-label">08:00</span></div>
+            <div class="bar-col"><div class="bar-track"><div class="bar-fill bar-codex" style="height:92%"></div></div><span class="bar-label">12:00</span></div>
+            <div class="bar-col"><div class="bar-track"><div class="bar-fill bar-codex" style="height:65%"></div></div><span class="bar-label">16:00</span></div>
+            <div class="bar-col"><div class="bar-track"><div class="bar-fill bar-agent" style="height:78%"></div></div><span class="bar-label">20:00</span></div>
+            <div class="bar-col"><div class="bar-track"><div class="bar-fill bar-codex" style="height:45%"></div></div><span class="bar-label">Now</span></div>
+          </div>
+        </div>
+        <div class="chart-box gate-chart">
+          <div class="chart-title">Gate</div>
+          <div class="chart-subtitle">Usage breakdown</div>
+          <div class="gate-stats">
+            <div class="gate-row"><span class="gate-label">Codex calls</span><span class="gate-val">122k</span></div>
+            <div class="gate-row"><span class="gate-label">Agent calls</span><span class="gate-val">89k</span></div>
+            <div class="gate-row"><span class="gate-label">Cache hits</span><span class="gate-val" style="color:var(--accent-green)">94%</span></div>
+            <div class="gate-row"><span class="gate-label">Errors</span><span class="gate-val" style="color:#ef4444">0.3%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secondary Charts -->
+      <div class="secondary-charts">
+        <div class="sec-chart">
+          <div class="sec-title">Codex Pts Distribution</div>
+          <div style="display:flex;align-items:flex-end;gap:6px;height:50px;margin-bottom:8px;">
+            <div style="flex:3;background:linear-gradient(180deg,var(--accent-blue),rgba(59,130,246,0.2));border-radius:3px 3px 0 0;height:60%"></div>
+            <div style="flex:5;background:linear-gradient(180deg,var(--accent-purple),rgba(139,92,246,0.2));border-radius:3px 3px 0 0;height:100%"></div>
+            <div style="flex:2;background:linear-gradient(180deg,#374151,rgba(55,65,81,0.2));border-radius:3px 3px 0 0;height:40%"></div>
+          </div>
+          <div class="legend">
+            <span><span class="legend-dot" style="background:var(--accent-blue)"></span>14% Pts A</span>
+            <span><span class="legend-dot" style="background:var(--accent-purple)"></span>33% Pts B</span>
+            <span><span class="legend-dot" style="background:#374151"></span>53% Other</span>
+          </div>
+        </div>
+        <div class="sec-chart">
+          <div class="sec-title">By Project</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:50px;font-size:9px;color:#9ca3af">api-gw</span><div style="flex:1;height:8px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden"><div style="width:65%;height:100%;background:var(--accent-blue);border-radius:4px"></div></div><span style="font-size:9px;color:#e5e7eb;font-weight:600">65%</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:50px;font-size:9px;color:#9ca3af">web</span><div style="flex:1;height:8px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden"><div style="width:45%;height:100%;background:var(--accent-purple);border-radius:4px"></div></div><span style="font-size:9px;color:#e5e7eb;font-weight:600">45%</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:50px;font-size:9px;color:#9ca3af">mobile</span><div style="flex:1;height:8px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden"><div style="width:30%;height:100%;background:var(--accent-green);border-radius:4px"></div></div><span style="font-size:9px;color:#e5e7eb;font-weight:600">30%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent/Model Bar -->
+      <div class="agent-bar">
+        <span style="font-size:11px;color:#9ca3af">By Agent</span>
+        <div class="agent-pill"><span class="dot" style="background:var(--accent-blue)"></span> Codex <span class="count">12</span></div>
+        <div class="agent-pill"><span class="dot" style="background:var(--accent-purple)"></span> Claude <span class="count">8</span></div>
+        <div class="agent-pill"><span class="dot" style="background:var(--accent-green)"></span> Gemini <span class="count">5</span></div>
+        <div class="agent-pill"><span class="dot" style="background:#374151"></span> GPT <span class="count">3</span></div>
+        <div class="agent-pill"><span class="dot" style="background:#6b7280"></span> Other <span class="count">2</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- QA: 750px 复核模式 -->
+<script>
+// 按住 Q 键临时切到 750px 1:1 模式方便对比
+let qaMode = false;
+document.addEventListener('keydown', e => {
+  if (e.key === 'q' && !qaMode) {
+    qaMode = true;
+    document.documentElement.style.setProperty('--board-scale', '1');
+  }
+});
+document.addEventListener('keyup', e => {
+  if (e.key === 'q') {
+    qaMode = false;
+    const scale = Math.min(1, window.innerWidth / 750);
+    document.documentElement.style.setProperty('--board-scale', String(scale));
+  }
+});
+</script>
+</body>
+</html>
