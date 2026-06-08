@@ -293,6 +293,18 @@ export default function ToolDetail() {
                   }}>{s}</span>
                 ))}
               </div>
+              {/* 在线预览 */}
+              <div style={{ marginTop: 20, padding: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <p style={{ color: '#6e6878', fontSize: 11, marginBottom: 10 }}>
+                  🖥️ 在线预览 — 750px 基准画板，自适应缩放（可按 Q 键切 1:1 模式）
+                </p>
+                <iframe
+                  src={`/eval/${tool.name}/dashboard-code.html`}
+                  style={{ width: '100%', height: 500, border: 'none', borderRadius: 6, background: '#0a0c0e' }}
+                  title="代码还原预览"
+                  loading="lazy"
+                />
+              </div>
             </div>
           )}
 
@@ -398,6 +410,18 @@ export default function ToolDetail() {
                     </div>
                   </a>
                 ))}
+              </div>
+              {/* 在线预览 */}
+              <div style={{ marginTop: 20, padding: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <p style={{ color: '#6e6878', fontSize: 11, marginBottom: 10 }}>
+                  🖥️ 在线预览 — 750px 基准画板，自适应缩放（可按 Q 键切 1:1 模式）
+                </p>
+                <iframe
+                  src={`/eval/${tool.name}/dashboard-code.html`}
+                  style={{ width: '100%', height: 500, border: 'none', borderRadius: 6, background: '#0a0c0e' }}
+                  title="代码还原预览"
+                  loading="lazy"
+                />
               </div>
             </div>
           )}
@@ -556,6 +580,18 @@ export default function ToolDetail() {
                     </div>
                   </Link>
                 ))}
+              </div>
+              {/* 在线预览 */}
+              <div style={{ marginTop: 20, padding: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <p style={{ color: '#6e6878', fontSize: 11, marginBottom: 10 }}>
+                  🖥️ 在线预览 — 750px 基准画板，自适应缩放（可按 Q 键切 1:1 模式）
+                </p>
+                <iframe
+                  src={`/eval/${tool.name}/dashboard-code.html`}
+                  style={{ width: '100%', height: 500, border: 'none', borderRadius: 6, background: '#0a0c0e' }}
+                  title="代码还原预览"
+                  loading="lazy"
+                />
               </div>
             </div>
           )}
