@@ -1,0 +1,4 @@
+[
+  { "src": "test-flawed.ts", "label": "🧪 测试文件", "sub": "15+ 违规埋点的 TypeScript", "kind": "code" },
+  { "src": "audit-summary.md", "label": "📋 审计报告", "sub": "17/23 规则命中 · 6严重+7重要", "kind": "doc" }
+]

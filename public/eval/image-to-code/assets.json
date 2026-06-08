@@ -1,0 +1,6 @@
+[
+  { "src": "test-ui-input.png", "label": "📸 测试输入图", "sub": "2240×1840 CodePal 仪表盘", "kind": "image" },
+  { "src": "bbox_preview.png", "label": "🔍 bbox 标注预览", "sub": "8 个区域精确标注", "kind": "image" },
+  { "src": "code-preview.png", "label": "🖥️ 代码还原效果", "sub": "HTML/CSS 完整还原预览", "kind": "image" },
+  { "src": "dashboard-code.html", "label": "🖥️ 在线预览", "sub": "新标签打开完整页面", "kind": "link" }
+]
