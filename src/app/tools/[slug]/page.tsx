@@ -177,14 +177,9 @@ export default function ToolDetail() {
 
   // 测评截图
   const evalImages = [
-    { src: `/eval/${tool.name}/test-ui-input.png`, label: '测试输入图', sub: '2240×1840 CodePal 仪表盘' },
-    { src: `/eval/${tool.name}/bbox_preview.png`, label: 'bbox 标注预览', sub: '8 个区域精确标注' },
-    { src: `/eval/${tool.name}/logo-codepal.png`, label: 'Logo', sub: '420×120 · 3x · corners 抠底' },
-    { src: `/eval/${tool.name}/nav-bar.png`, label: '导航栏', sub: '1500×72 · 2x' },
-    { src: `/eval/${tool.name}/chart-tokens.png`, label: 'Token 消费图表', sub: '960×390 · 2x' },
-    { src: `/eval/${tool.name}/chart-gate.png`, label: 'Gate 统计', sub: '450×390 · 2x' },
-    { src: `/eval/${tool.name}/chart-codex-pts.png`, label: 'Codex Pts 图表', sub: '700×280 · 2x' },
-    { src: `/eval/${tool.name}/code-preview.png`, label: '代码还原预览', sub: 'HTML/CSS 完整还原效果' },
+    { src: `/eval/${tool.name}/test-ui-input.png`, label: '📸 测试输入图', sub: '2240×1840 CodePal 仪表盘' },
+    { src: `/eval/${tool.name}/bbox_preview.png`, label: '🔍 bbox 标注预览', sub: '8 个区域精确标注' },
+    { src: `/eval/${tool.name}/code-preview.png`, label: '🖥️ 代码还原效果', sub: 'HTML/CSS 完整还原预览' },
   ]
 
   return (
