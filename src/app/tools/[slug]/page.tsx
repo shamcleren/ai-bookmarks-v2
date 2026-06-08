@@ -144,10 +144,15 @@ export default function ToolDetail() {
   const [assetsLoaded, setAssetsLoaded] = useState(false)
 
   useEffect(() => {
-    if (!tool?.name) return
-    fetch(`/eval/${tool.name}/assets.json`)
-      .then(r => r.ok ? r.json() : [])
-      .then(data => { setEvalAssets(data); setAssetsLoaded(true) })
+    if (!tool?.name) { setAssetsLoaded(true); return }
+    fetch(`/eval/${tool.name}/assets.json`, { cache: 'no-store' })
+      .then(r => {
+        if (!r.ok) return []
+        return r.text().then(t => {
+          try { return JSON.parse(t) } catch { return [] }
+        })
+      })
+      .then(data => { setEvalAssets(Array.isArray(data) ? data : []); setAssetsLoaded(true) })
       .catch(() => { setEvalAssets([]); setAssetsLoaded(true) })
   }, [tool?.name])
 
