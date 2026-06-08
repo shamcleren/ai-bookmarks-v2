@@ -47,9 +47,10 @@ function getDeployIcon(type: string) {
 }
 
 function getLevelBadge(score: number) {
-  if (score >= 80) return { label: '✅ 推荐', color: '#00ff88', bg: 'rgba(0,255,136,0.1)' }
-  if (score >= 60) return { label: '🔧 一般', color: '#ffc107', bg: 'rgba(255,193,7,0.1)' }
-  if (score >= 40) return { label: '⏳ 观望', color: '#ff9800', bg: 'rgba(255,152,0,0.1)' }
+  if (score >= 8) return { label: '✅ 推荐', color: '#00ff88', bg: 'rgba(0,255,136,0.1)' }
+  if (score >= 6) return { label: '🔧 一般', color: '#ffc107', bg: 'rgba(255,193,7,0.1)' }
+  if (score >= 4) return { label: '⏳ 观望', color: '#ff9800', bg: 'rgba(255,152,0,0.1)' }
+  if (score > 0) return { label: '🧪 已测', color: '#00c8e8', bg: 'rgba(0,200,232,0.1)' }
   return { label: '❓ 待测', color: '#888', bg: 'rgba(136,136,136,0.1)' }
 }
 
@@ -115,10 +116,9 @@ function ToolCard({ tool, selected, onToggle }: { tool: Tool; selected: boolean;
           padding: '10px 14px',
           marginBottom: 12,
           fontSize: 13,
-          color: '#ccc',
-          fontStyle: 'italic'
+          color: '#ccc'
         }}>
-          💬 {tool.verdict}
+          💬 {(tool.verdict.includes('【结果】') ? tool.verdict.split('【结果】')[1].split('【')[0].trim().slice(0, 100) : tool.verdict.slice(0, 100))}
         </div>
       )}
 
