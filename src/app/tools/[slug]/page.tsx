@@ -139,7 +139,7 @@ export default function ToolDetail() {
 
   const score = tool.overall_score || Math.round((tool.ease_score + tool.useful_score + tool.hype_score) / 3)
   const verdictBlocks = tool.verdict ? parseVerdict(tool.verdict) : []
-  // 评测资产：从 assets.json 动态加载（图片/代码/文档/链接）
+  // 评测资产：从 /eval/{tool}/assets.json 动态加载（图片/代码/文档/链接）
   const [evalAssets, setEvalAssets] = useState<{ src: string; label: string; sub: string; kind: string }[]>([])
   const [assetsLoaded, setAssetsLoaded] = useState(false)
 
