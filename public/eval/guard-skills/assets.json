@@ -1,4 +1,14 @@
 [
-  { "src": "test-flawed.ts", "label": "🧪 测试文件", "sub": "15+ 违规埋点的 TypeScript", "kind": "code" },
-  { "src": "audit-summary.md", "label": "📋 审计报告", "sub": "17/23 规则命中 · 6严重+7重要", "kind": "doc" }
+  {
+    "src": "test-flawed.txt",
+    "label": "\ud83e\uddea \u6d4b\u8bd5\u6587\u4ef6",
+    "sub": "15+ \u8fdd\u89c4\u57cb\u70b9\u7684 TypeScript",
+    "kind": "code"
+  },
+  {
+    "src": "audit-summary.md",
+    "label": "\ud83d\udccb \u5ba1\u8ba1\u62a5\u544a",
+    "sub": "17/23 \u89c4\u5219\u547d\u4e2d \u00b7 6\u4e25\u91cd+7\u91cd\u8981",
+    "kind": "doc"
+  }
 ]
