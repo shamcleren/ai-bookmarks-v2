@@ -143,18 +143,8 @@ export default function ToolDetail() {
   const [evalAssets, setEvalAssets] = useState<{ src: string; label: string; sub: string; kind: string }[]>([])
   const [assetsLoaded, setAssetsLoaded] = useState(false)
 
-  useEffect(() => {
-    if (!tool?.name) { setAssetsLoaded(true); return }
-    fetch(`/eval/${tool.name}/assets.json`, { cache: 'no-store' })
-      .then(r => {
-        if (!r.ok) return []
-        return r.text().then(t => {
-          try { return JSON.parse(t) } catch { return [] }
-        })
-      })
-      .then(data => { setEvalAssets(Array.isArray(data) ? data : []); setAssetsLoaded(true) })
-      .catch(() => { setEvalAssets([]); setAssetsLoaded(true) })
-  }, [tool?.name])
+  // SKIP: eval assets fetch temporarily disabled for debugging
+  // useEffect(() => { ... }, [tool?.name])
 
   return (
     <div className="container fade-in" style={{ maxWidth: 960 }}>
@@ -247,7 +237,7 @@ export default function ToolDetail() {
           )}
 
           {/* 测试截图 */}
-          {tool.tested_at && assetsLoaded && evalAssets.length > 0 && (
+          {false && tool.tested_at && (
             <div className="card" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
               <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f0edf5', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ display: 'inline-block', width: 32, height: 32, borderRadius: 8, background: 'rgba(0,230,118,0.1)', textAlign: 'center', lineHeight: '32px', fontSize: 16 }}>🖼️</span> 测试截图
