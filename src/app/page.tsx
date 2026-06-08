@@ -140,29 +140,16 @@ function FeaturedCard({ tool }: { tool: Tool }) {
   const score = tool.overall_score || Math.round((tool.ease_score + tool.useful_score + tool.hype_score) / 3)
 
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, rgba(0,217,255,0.15) 0%, rgba(0,255,136,0.1) 100%)',
-      border: '1px solid rgba(0,217,255,0.3)',
-      borderRadius: 16,
-      padding: 24,
-      flex: 1,
-      minWidth: 240
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: 'rgba(0,255,136,0.2)', color: '#00ff88' }}>
-          ⭐ 精选
-        </span>
-        <span style={{ fontSize: 28, fontWeight: 'bold', color: '#ffc107' }}>{score}</span>
+    <div className="featured-card">
+      <div className="fc-header">
+        <span className="fc-badge">⭐ 精选</span>
+        <span className="fc-score">{score}</span>
       </div>
-      <h3 style={{ fontSize: 16, marginBottom: 8 }}>
-        <a href={tool.url} target="_blank" rel="noopener noreferrer" style={{ color: '#fff' }}>
-          {tool.name}
-        </a>
-      </h3>
-      <p style={{ color: '#aaa', fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
-        {tool.description?.slice(0, 80)}...
-      </p>
-      <Link href={`/tools/${tool.id}-${nameToSlug(tool.name)}`} style={{ color: '#00d9ff', fontSize: 13 }}>
+      <div className="fc-name">
+        <a href={tool.url} target="_blank" rel="noopener noreferrer">{tool.name}</a>
+      </div>
+      <p className="fc-desc">{tool.description?.slice(0, 80)}...</p>
+      <Link href={`/tools/${tool.id}-${nameToSlug(tool.name)}`} className="fc-link">
         阅读评测 →
       </Link>
     </div>
@@ -176,23 +163,23 @@ function formatDate(dateStr: string) {
 
 function Nav({ user }: { user: any }) {
   return (
-    <div className="nav">
-      <a href="/" className="active">🏠 首页</a>
-      <a href="/search">🔍 搜索</a>
-      <a href="/tags">🏷️ 标签</a>
-      <a href="/rank">🏆 榜单</a>
+    <nav className="nav">
+      <a href="/" className="active">首页</a>
+      <a href="/search">搜索</a>
+      <a href="/tags">标签</a>
+      <a href="/rank">榜单</a>
       {user ? (
         <>
-          <a href="/favorites">⭐ 收藏</a>
-          <span style={{ color: '#666', padding: '12px 0' }}>|</span>
-          <span style={{ color: '#00ff88', padding: '12px 0' }}>
-            👤 {user.user_metadata?.full_name || user.email?.split('@')[0] || '已登录'}
-          </span>
+          <a href="/favorites">收藏</a>
+          <span className="nav-sep">|</span>
+          <Link href="/favorites" style={{ color: '#a09baa', fontSize: 13, fontWeight: 500, padding: '8px 12px', textDecoration: 'none' }}>
+            {user.user_metadata?.full_name || user.email?.split('@')[0] || '已登录'}
+          </Link>
         </>
       ) : (
         <a href="/auth/login">登录</a>
       )}
-    </div>
+    </nav>
   )
 }
 
@@ -328,19 +315,10 @@ export default function Home() {
 
   return (
     <div className="container">
-      <h1 style={{
-        textAlign: 'center',
-        fontSize: '2.5rem',
-        marginBottom: 10,
-        background: 'linear-gradient(90deg, #00d9ff, #00ff88)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent'
-      }}>
-        🛠️ AI 工具评测
-      </h1>
-      <p style={{ textAlign: 'center', color: '#888', marginBottom: 30 }}>
-        拒绝云评测，实测才是真
-      </p>
+      <div className="page-header">
+        <h1>AI 工具评测</h1>
+        <p>拒绝云评测，实测才是真</p>
+      </div>
 
       <Nav user={user} />
 
