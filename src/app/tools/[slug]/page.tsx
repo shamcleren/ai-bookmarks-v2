@@ -139,11 +139,17 @@ export default function ToolDetail() {
 
   const score = tool.overall_score || Math.round((tool.ease_score + tool.useful_score + tool.hype_score) / 3)
   const verdictBlocks = tool.verdict ? parseVerdict(tool.verdict) : []
-  const evalImages = [
-    { src: `/eval/${tool.name}/test-ui-input.png`, label: '📸 测试输入图', sub: '2240×1840 CodePal 仪表盘' },
-    { src: `/eval/${tool.name}/bbox_preview.png`, label: '🔍 bbox 标注预览', sub: '8 个区域精确标注' },
-    { src: `/eval/${tool.name}/code-preview.png`, label: '🖥️ 代码还原效果', sub: 'HTML/CSS 完整还原预览' },
-  ]
+  // 评测资产：从 assets.json 动态加载（图片/代码/文档/链接）
+  const [evalAssets, setEvalAssets] = useState<{ src: string; label: string; sub: string; kind: string }[]>([])
+  const [assetsLoaded, setAssetsLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!tool?.name) return
+    fetch(`/eval/${tool.name}/assets.json`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { setEvalAssets(data); setAssetsLoaded(true) })
+      .catch(() => { setEvalAssets([]); setAssetsLoaded(true) })
+  }, [tool?.name])
 
   return (
     <div className="container fade-in" style={{ maxWidth: 960 }}>
@@ -236,43 +242,67 @@ export default function ToolDetail() {
           )}
 
           {/* 测试截图 */}
-          {tool.tested_at && (
+          {tool.tested_at && assetsLoaded && evalAssets.length > 0 && (
             <div className="card" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
               <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f0edf5', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ display: 'inline-block', width: 32, height: 32, borderRadius: 8, background: 'rgba(0,230,118,0.1)', textAlign: 'center', lineHeight: '32px', fontSize: 16 }}>🖼️</span> 测试截图
               </h2>
               <p style={{ color: '#6e6878', fontSize: 12, marginBottom: 20 }}>实测过程中全部截图 · 点击可查看原图</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14 }}>
-                {evalImages.map((img, i) => (
-                  <a key={i} href={img.src} target="_blank" rel="noopener noreferrer"
-                    style={{ display: 'block', background: '#16161f', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', textDecoration: 'none', transition: 'border-color 0.2s, transform 0.15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#00c8e8'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(0)' }}>
-                    <div style={{ width: '100%', aspectRatio: '4/3', position: 'relative', background: 'repeating-conic-gradient(rgba(255,255,255,0.02) 0% 25%, transparent 0% 50%) 50% / 20px 20px' }}>
-                      <img src={img.src} alt={img.label} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: 8 }} />
-                    </div>
-                    <div style={{ padding: '8px 10px 10px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#f0edf5' }}>{img.label}</div>
-                      <div style={{ fontSize: 10, color: '#6e6878', marginTop: 2 }}>{img.sub}</div>
-                    </div>
-                  </a>
-                ))}
+                {evalAssets.map((asset, i) => {
+                  const src = asset.src.startsWith('http') ? asset.src : `/eval/${tool.name}/${asset.src}`
+                  return (
+                    <a key={i} href={src} target="_blank" rel="noopener noreferrer"
+                      style={{ display: 'block', background: '#16161f', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', textDecoration: 'none', transition: 'border-color 0.2s, transform 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#00c8e8'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(0)' }}>
+                      {asset.kind === 'image' ? (
+                        <>
+                          <div style={{ width: '100%', aspectRatio: '4/3', position: 'relative', background: 'repeating-conic-gradient(rgba(255,255,255,0.02) 0% 25%, transparent 0% 50%) 50% / 20px 20px' }}>
+                            <img src={src} alt={asset.label} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: 8 }}
+                              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                          </div>
+                          <div style={{ padding: '8px 10px 10px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#f0edf5' }}>{asset.label}</div>
+                            {asset.sub && <div style={{ fontSize: 10, color: '#6e6878', marginTop: 2 }}>{asset.sub}</div>}
+                          </div>
+                        </>
+                      ) : asset.kind === 'link' ? (
+                        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 100, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                          <div style={{ fontSize: 28, marginBottom: 8 }}>🔗</div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#f0edf5', marginBottom: 4 }}>{asset.label}</div>
+                          {asset.sub && <div style={{ fontSize: 10, color: '#6e6878' }}>{asset.sub}</div>}
+                        </div>
+                      ) : (
+                        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 100 }}>
+                          <div style={{ fontSize: 28, marginBottom: 8 }}>{asset.kind === 'code' ? '📄' : '📋'}</div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#f0edf5', marginBottom: 4 }}>{asset.label}</div>
+                          {asset.sub && <div style={{ fontSize: 10, color: '#6e6878', marginTop: 'auto' }}>{asset.sub}</div>}
+                        </div>
+                      )}
+                    </a>
+                  )
+                })}
               </div>
 
-              {/* 在线还原预览 — 整张卡片可点击 */}
-              <a href={`/eval/${tool.name}/dashboard-code.html`} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'block', marginTop: 20, textDecoration: 'none', border: '1px solid rgba(0,200,232,0.15)', borderRadius: 10, overflow: 'hidden', transition: 'border-color 0.2s', background: '#0a0c0e' }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = '#00c8e8')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(0,200,232,0.15)')}>
-                <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,200,232,0.06)', borderBottom: '1px solid rgba(0,200,232,0.08)' }}>
-                  <span style={{ fontSize: 16 }}>🖥️</span>
-                  <span style={{ color: '#00c8e8', fontWeight: 600, fontSize: 13, flex: 1 }}>在线预览 · 点击新标签打开完整页面</span>
-                  <span style={{ color: '#6e6878', fontSize: 11 }}>↗ 打开</span>
-                </div>
-                <iframe src={`/eval/${tool.name}/dashboard-code.html`}
-                  style={{ width: '100%', height: 400, border: 'none', display: 'block', pointerEvents: 'none' }}
-                  title="代码还原预览" loading="lazy" />
-              </a>
+              {/* 在线 HTML 预览 — 仅当有 dashboard-code 时显示 */}
+              {evalAssets.some(a => a.kind === 'link' && a.src.includes('dashboard-code')) && (
+                <a href={`/eval/${tool.name}/dashboard-code.html`} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'block', marginTop: 20, textDecoration: 'none', border: '1px solid rgba(0,200,232,0.15)', borderRadius: 10, overflow: 'hidden', transition: 'border-color 0.2s', background: '#0a0c0e' }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = '#00c8e8')}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(0,200,232,0.15)')}>
+                  <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,200,232,0.06)', borderBottom: '1px solid rgba(0,200,232,0.08)' }}>
+                    <span style={{ fontSize: 16 }}>🖥️</span>
+                    <span style={{ color: '#00c8e8', fontWeight: 600, fontSize: 13, flex: 1 }}>在线预览 · 点击新标签打开完整页面</span>
+                    <span style={{ color: '#6e6878', fontSize: 11 }}>↗ 打开</span>
+                  </div>
+                  <iframe src={`/eval/${tool.name}/dashboard-code.html`}
+                    style={{ width: '100%', height: 400, border: 'none', display: 'block', pointerEvents: 'none' }}
+                    title="代码还原预览" loading="lazy" />
+                </a>
+              )}
+
+
             </div>
           )}
 
